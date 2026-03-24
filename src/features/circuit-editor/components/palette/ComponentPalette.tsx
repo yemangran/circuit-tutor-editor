@@ -1,6 +1,9 @@
+import type { DragEvent } from 'react'
 import { componentTemplates } from '../../componentTemplates'
 import { useCircuitStore } from '../../store/circuitStore'
 import { useTranslation } from 'react-i18next'
+
+const PALETTE_MIME_TYPE = 'application/x-circuit-component'
 
 function getComponentHint(kind: keyof typeof componentTemplates) {
   switch (kind) {
@@ -36,6 +39,14 @@ export function ComponentPalette() {
   const { t } = useTranslation()
   const templates = Object.values(componentTemplates)
 
+  function handleDragStart(
+    event: DragEvent<HTMLButtonElement>,
+    kind: keyof typeof componentTemplates,
+  ) {
+    event.dataTransfer.setData(PALETTE_MIME_TYPE, kind)
+    event.dataTransfer.effectAllowed = 'move'
+  }
+
   return (
     <aside className="studio-card palette-panel">
       <div className="panel-header">
@@ -49,7 +60,9 @@ export function ComponentPalette() {
             key={template.kind}
             type="button"
             className="palette-button palette-tile"
+            draggable
             onClick={() => addComponent(template.kind)}
+            onDragStart={(event) => handleDragStart(event, template.kind)}
             title={t(`palette.components.${template.kind}`)}
           >
             <div className="palette-tile-hint">{getComponentHint(template.kind)}</div>

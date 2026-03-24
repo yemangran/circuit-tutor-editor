@@ -1,9 +1,12 @@
 import React from 'react'
+import type { DragEvent } from 'react'
 import ReactFlow, {
   Background,
+  BackgroundVariant,
   ConnectionMode,
   Controls,
   MarkerType,
+  useReactFlow,
   type Connection,
   type Edge,
   type Node,
@@ -11,6 +14,7 @@ import ReactFlow, {
   type NodeMouseHandler,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
+import { componentTemplates } from '../../componentTemplates'
 import {
   CapacitorNode,
   ConductanceNode,
@@ -27,6 +31,7 @@ import {
 } from '../nodes'
 import { useCircuitStore } from '../../store/circuitStore'
 import type { CircuitComponent, CircuitWire } from '../../types/circuit'
+import type { ComponentKind } from '../../types/circuit'
 import type { CircuitFlowNodeData } from '../nodes'
 import i18n from '../../../../i18n'
 
@@ -44,6 +49,9 @@ const nodeTypes = {
   switch_spdt: SwitchSPDTNode,
   ground: GroundNode,
 }
+
+const CANVAS_GRID_SIZE: [number, number] = [20, 20]
+const PALETTE_MIME_TYPE = 'application/x-circuit-component'
 
 function formatParameterText(component: CircuitComponent): string | undefined {
   const parameterEntries = Object.entries(component.parameters)
@@ -132,8 +140,10 @@ function isValidConnection(connection: Connection): connection is Required<
 }
 
 export default function CircuitCanvas() {
+  const { screenToFlowPosition } = useReactFlow()
   const components = useCircuitStore((state) => state.doc.components)
   const wires = useCircuitStore((state) => state.doc.wires)
+  const addComponent = useCircuitStore((state) => state.addComponent)
   const addWire = useCircuitStore((state) => state.addWire)
   const clearCanvas = useCircuitStore((state) => state.clearCanvas)
   const selectedComponentId = useCircuitStore((state) => state.selectedComponentId)
@@ -146,6 +156,17 @@ export default function CircuitCanvas() {
     selected: component.id === selectedComponentId,
   }))
   const edges = wires.map(toFlowEdge)
+
+  function snapToCanvasGrid(position: { x: number; y: number }) {
+    return {
+      x: Math.round(position.x / CANVAS_GRID_SIZE[0]) * CANVAS_GRID_SIZE[0],
+      y: Math.round(position.y / CANVAS_GRID_SIZE[1]) * CANVAS_GRID_SIZE[1],
+    }
+  }
+
+  function isComponentKind(value: string): value is ComponentKind {
+    return value in componentTemplates
+  }
 
   function handleConnect(connection: Connection) {
     if (!isValidConnection(connection)) {
@@ -175,6 +196,10 @@ export default function CircuitCanvas() {
     updateComponentPosition(node.id, node.position)
   }
 
+  const handleNodeDrag: NodeDragHandler = (_, node) => {
+    updateComponentPosition(node.id, node.position)
+  }
+
   const handleNodeClick: NodeMouseHandler = (_, node) => {
     selectComponent(node.id)
   }
@@ -193,6 +218,30 @@ export default function CircuitCanvas() {
     clearCanvas()
   }
 
+  function handleDragOver(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'move'
+  }
+
+  function handleDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault()
+
+    const kind = event.dataTransfer.getData(PALETTE_MIME_TYPE)
+
+    if (!isComponentKind(kind)) {
+      return
+    }
+
+    const position = snapToCanvasGrid(
+      screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      }),
+    )
+
+    addComponent(kind, position)
+  }
+
   return (
     <>
       <div className="canvas-stage">
@@ -207,13 +256,23 @@ export default function CircuitCanvas() {
           edges={edges}
           nodeTypes={nodeTypes}
           fitView
+          snapToGrid
+          snapGrid={CANVAS_GRID_SIZE}
           connectionMode={ConnectionMode.Loose}
           onConnect={handleConnect}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          onNodeDrag={handleNodeDrag}
           onNodeDragStop={handleNodeDragStop}
           onNodeClick={handleNodeClick}
           onPaneClick={() => selectComponent(null)}
         >
-          <Background />
+          <Background
+            variant={BackgroundVariant.Lines}
+            gap={CANVAS_GRID_SIZE[0]}
+            size={1}
+            color="rgba(0, 0, 0, 0.24)"
+          />
           <Controls />
         </ReactFlow>
       </div>

@@ -1,3 +1,4 @@
+import { ReactFlowProvider } from "reactflow";
 import CircuitCanvas from "./canvas/CircuitCanvas";
 import { PropertyPanel } from "./panel/PropertyPanel";
 import { ComponentPalette } from "./palette/ComponentPalette";
@@ -13,35 +14,37 @@ export default function CircuitEditor() {
   const hasSelection = Boolean(selectedComponentId);
 
   return (
-    <div
-      className="studio-layout"
-      style={{
-        gridTemplateColumns: hasSelection
-          ? "240px minmax(0, 1fr) 340px"
-          : "240px minmax(0, 1fr)",
-      }}
-    >
-      <ComponentPalette />
-      <div className="studio-card canvas-shell">
-        <div className="canvas-head">
-          <div>
-            <h3 className="panel-title">{t("editor.canvas.title")}</h3>
-            <p className="panel-subtitle">{t("editor.canvas.subtitle")}</p>
-          </div>
-          <div className="workspace-meta">
-            <div className="mini-chip">
-              {t("editor.canvas.count", { count: components.length })}
+    <ReactFlowProvider>
+      <div
+        className="studio-layout"
+        style={{
+          gridTemplateColumns: hasSelection
+            ? "240px minmax(0, 1fr) 340px"
+            : "240px minmax(0, 1fr)",
+        }}
+      >
+        <ComponentPalette />
+        <div className="studio-card canvas-shell">
+          <div className="canvas-head">
+            <div>
+              <h3 className="panel-title">{t("editor.canvas.title")}</h3>
+              <p className="panel-subtitle">{t("editor.canvas.subtitle")}</p>
             </div>
-            <div className="mini-chip">
-              {selectedComponentId
-                ? t("editor.canvas.selected", { id: selectedComponentId })
-                : t("editor.canvas.noneSelected")}
+            <div className="workspace-meta">
+              <div className="mini-chip">
+                {t("editor.canvas.count", { count: components.length })}
+              </div>
+              <div className="mini-chip">
+                {selectedComponentId
+                  ? t("editor.canvas.selected", { id: selectedComponentId })
+                  : t("editor.canvas.noneSelected")}
+              </div>
             </div>
           </div>
+          <CircuitCanvas />
         </div>
-        <CircuitCanvas />
+        {hasSelection ? <PropertyPanel /> : null}
       </div>
-      {hasSelection ? <PropertyPanel /> : null}
-    </div>
+    </ReactFlowProvider>
   );
 }

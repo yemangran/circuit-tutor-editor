@@ -74,6 +74,14 @@ const en = {
     },
   },
   editor: {
+    nodeBadges: {
+      passive: 'Passive',
+      reactive: 'Reactive',
+      source: 'Source',
+      control: 'Control',
+      reference: 'Ref',
+      switch: 'Switch',
+    },
     canvas: {
       kicker: 'Canvas',
       title: 'Topology Surface',

@@ -69,6 +69,14 @@ const zhCN = {
     },
   },
   editor: {
+    nodeBadges: {
+      passive: '无源',
+      reactive: '储能',
+      source: '电源',
+      control: '受控',
+      reference: '参考',
+      switch: '开关',
+    },
     canvas: {
       kicker: '画布',
       title: '拓扑画布',

@@ -87,14 +87,28 @@ export const useCircuitStore = create<{
       }
     }),
   updateComponentPosition: (componentId, position) =>
-    set((state) => ({
-      doc: {
-        ...state.doc,
-        components: state.doc.components.map((component) =>
-          component.id === componentId ? { ...component, position } : component,
-        ),
-      },
-    })),
+    set((state) => {
+      const currentComponent = state.doc.components.find(
+        (component) => component.id === componentId,
+      )
+
+      if (
+        currentComponent &&
+        currentComponent.position.x === position.x &&
+        currentComponent.position.y === position.y
+      ) {
+        return state
+      }
+
+      return {
+        doc: {
+          ...state.doc,
+          components: state.doc.components.map((component) =>
+            component.id === componentId ? { ...component, position } : component,
+          ),
+        },
+      }
+    }),
   updateComponentLabel: (componentId, label) =>
     set((state) => ({
       doc: {

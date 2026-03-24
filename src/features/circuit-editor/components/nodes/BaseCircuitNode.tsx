@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { Handle, Position, type NodeProps } from 'reactflow'
+import i18n from '../../../../i18n'
 
 export type CircuitFlowNodeKind =
   | 'resistor'
@@ -49,40 +50,40 @@ function getNodeAccent(kind: CircuitFlowNodeKind) {
       return {
         accent: '#2563eb',
         soft: 'rgba(219, 234, 254, 0.86)',
-        badge: 'Passive',
+        badgeKey: 'passive',
       }
     case 'capacitor':
     case 'inductor':
       return {
         accent: '#7c3aed',
         soft: 'rgba(237, 233, 254, 0.86)',
-        badge: 'Reactive',
+        badgeKey: 'reactive',
       }
     case 'voltage_source':
     case 'current_source':
       return {
         accent: '#f97316',
         soft: 'rgba(255, 237, 213, 0.92)',
-        badge: 'Source',
+        badgeKey: 'source',
       }
     case 'controlled_voltage_source':
     case 'controlled_current_source':
       return {
         accent: '#0f766e',
         soft: 'rgba(204, 251, 241, 0.92)',
-        badge: 'Control',
+        badgeKey: 'control',
       }
     case 'ground':
       return {
         accent: '#0f172a',
         soft: 'rgba(226, 232, 240, 0.92)',
-        badge: 'Ref',
+        badgeKey: 'reference',
       }
     default:
       return {
         accent: '#475569',
         soft: 'rgba(241, 245, 249, 0.92)',
-        badge: 'Switch',
+        badgeKey: 'switch',
       }
   }
 }
@@ -104,7 +105,9 @@ export function BaseCircuitNode({
         ['--node-accent-soft' as string]: accent.soft,
       }}
     >
-      <div className="circuit-node-badge">{accent.badge}</div>
+      <div className="circuit-node-badge">
+        {i18n.t(`editor.nodeBadges.${accent.badgeKey}`)}
+      </div>
       {handles.map((handle) => (
         <Handle
           key={`${data.kind}-${handle.id}`}
@@ -115,7 +118,7 @@ export function BaseCircuitNode({
         />
       ))}
       <div className="circuit-node-label">{data.label}</div>
-      <div>{symbol}</div>
+      <div className="circuit-node-symbol">{symbol}</div>
       {data.parameterText ? (
         <div className="circuit-node-parameter">{data.parameterText}</div>
       ) : null}
