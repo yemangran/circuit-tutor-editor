@@ -1,98 +1,126 @@
+import { useState } from 'react'
 import CircuitEditor from './features/circuit-editor/components/CircuitEditor'
 import { useTranslation } from 'react-i18next'
-
-const pageStyle = {
-  minHeight: '100vh',
-  padding: 24,
-  background:
-    'linear-gradient(180deg, #f8fafc 0%, #f8fafc 180px, #f1f5f9 100%)',
-  display: 'grid',
-  gridTemplateRows: 'auto minmax(0, 1fr)',
-  gap: 20,
-}
-
-const headerStyle = {
-  display: 'flex',
-  alignItems: 'flex-start',
-  justifyContent: 'space-between',
-  gap: 16,
-}
-
-const titleStyle = {
-  margin: 0,
-  fontSize: 30,
-  lineHeight: 1.1,
-  color: '#0f172a',
-}
-
-const descriptionStyle = {
-  margin: '10px 0 0',
-  maxWidth: 760,
-  color: '#475569',
-  lineHeight: 1.5,
-}
-
-const badgeStyle = {
-  alignSelf: 'flex-start',
-  padding: '8px 12px',
-  borderRadius: 999,
-  border: '1px solid #cbd5e1',
-  background: '#ffffffcc',
-  color: '#334155',
-  fontSize: 12,
-  fontWeight: 600,
-  backdropFilter: 'blur(6px)',
-}
-
-const workspaceStyle = {
-  minHeight: 0,
-  border: '1px solid #cbd5e1',
-  borderRadius: 24,
-  background: '#fffcf5',
-  boxShadow: '0 18px 60px rgba(15, 23, 42, 0.08)',
-  padding: 20,
-}
+import { useCircuitStore } from './features/circuit-editor/store/circuitStore'
+import { exportCircuit, type ExportCircuitResult } from './features/circuit-editor/exportCircuit'
 
 export default function App() {
   const { t, i18n } = useTranslation()
+  const doc = useCircuitStore((state) => state.doc)
+  const components = useCircuitStore((state) => state.doc.components)
+  const selectedComponentId = useCircuitStore((state) => state.selectedComponentId)
+  const hasGround = components.some((component) => component.kind === 'ground')
+  const exportState = hasGround && components.length > 0 ? 'ready' : 'draft'
+  const [exportResult, setExportResult] = useState<ExportCircuitResult | null>(null)
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'success' | 'error'>('idle')
+
+  function handleExport() {
+    setExportResult(exportCircuit(doc))
+    setCopyStatus('idle')
+  }
+
+  async function handleCopy() {
+    if (!exportResult) {
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(exportResult.payload, null, 2))
+      setCopyStatus('success')
+    } catch {
+      setCopyStatus('error')
+    }
+  }
+
+  async function handleToggleLanguage() {
+    const nextLanguage = i18n.resolvedLanguage === 'zh-CN' ? 'en' : 'zh-CN'
+    await i18n.changeLanguage(nextLanguage)
+  }
 
   return (
-    <main style={pageStyle}>
-      <header style={headerStyle}>
-        <div>
-          <h1 style={titleStyle}>{t('app.title')}</h1>
-          <p style={descriptionStyle}>
-            {t('app.description')}
-          </p>
+    <main className="app-shell">
+      <section className="workspace-panel">
+        <div className="workspace-shell">
+          <div className="workspace-head">
+            <div>
+              <h2 className="workspace-title">{t('app.workspace.title')}</h2>
+              <p className="support-text">{t('app.workspace.description')}</p>
+            </div>
+            <div className="workspace-meta workspace-tools">
+              <div
+                className="status-chip workspace-tool"
+                data-tone={exportState === 'ready' ? 'success' : 'accent'}
+              >
+                {exportState === 'ready'
+                  ? t('app.side.ready')
+                  : t('app.side.needsGround')}
+              </div>
+              <div className="status-chip workspace-tool" data-tone="primary">
+                {selectedComponentId
+                  ? t('app.side.selected', { id: selectedComponentId })
+                  : t('app.side.noSelection')}
+              </div>
+              <button
+                type="button"
+                className="panel-action workspace-tool"
+                data-tone="primary"
+                onClick={handleExport}
+              >
+                {t('panel.export.exportJson')}
+              </button>
+              <button
+                type="button"
+                className="panel-action workspace-tool"
+                data-tone="secondary"
+                disabled={!exportResult}
+                onClick={handleCopy}
+              >
+                {t('panel.export.copyJson')}
+              </button>
+              <button
+                type="button"
+                className="lang-button workspace-tool"
+                onClick={() => void handleToggleLanguage()}
+              >
+                {i18n.resolvedLanguage === 'zh-CN'
+                  ? t('app.language.en')
+                  : t('app.language.zhCN')}
+              </button>
+              {exportResult ? (
+                <>
+                  <div className="status-chip workspace-tool" data-tone="success">
+                    {t('panel.export.summaryGround')}:
+                    {' '}
+                    {exportResult.diagnostics.hasGround
+                      ? t('panel.fields.booleanTrue')
+                      : t('panel.fields.booleanFalse')}
+                  </div>
+                  <div className="status-chip workspace-tool" data-tone="primary">
+                    {t('panel.export.summaryPins')}:
+                    {' '}
+                    {exportResult.diagnostics.unconnectedPins.length}
+                  </div>
+                  <div className="status-chip workspace-tool" data-tone="primary">
+                    {t('panel.export.summaryConflicts')}:
+                    {' '}
+                    {exportResult.conflicts.length}
+                  </div>
+                </>
+              ) : null}
+              {copyStatus === 'success' ? (
+                <div className="status-chip workspace-tool" data-tone="success">
+                  {t('panel.export.copySuccess')}
+                </div>
+              ) : null}
+              {copyStatus === 'error' ? (
+                <div className="status-chip workspace-tool" data-tone="accent">
+                  {t('panel.export.copyError')}
+                </div>
+              ) : null}
+            </div>
+          </div>
+          <CircuitEditor />
         </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-          <button
-            type="button"
-            style={{
-              ...badgeStyle,
-              opacity: i18n.resolvedLanguage === 'en' ? 1 : 0.7,
-              cursor: 'pointer',
-            }}
-            onClick={() => void i18n.changeLanguage('en')}
-          >
-            {t('app.language.en')}
-          </button>
-          <button
-            type="button"
-            style={{
-              ...badgeStyle,
-              opacity: i18n.resolvedLanguage === 'zh-CN' ? 1 : 0.7,
-              cursor: 'pointer',
-            }}
-            onClick={() => void i18n.changeLanguage('zh-CN')}
-          >
-            {t('app.language.zhCN')}
-          </button>
-          <div style={badgeStyle}>{t('app.badge')}</div>
-        </div>
-      </header>
-      <section style={workspaceStyle}>
-        <CircuitEditor />
       </section>
     </main>
   )

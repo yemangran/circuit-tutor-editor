@@ -7,8 +7,8 @@ import ReactFlow, {
   type Connection,
   type Edge,
   type Node,
-  type NodeMouseHandler,
   type NodeDragHandler,
+  type NodeMouseHandler,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import {
@@ -108,14 +108,14 @@ function toFlowEdge(wire: CircuitWire): Edge {
     type: 'smoothstep',
     animated: false,
     style: {
-      stroke: '#334155',
-      strokeWidth: 2,
+      stroke: '#2563eb',
+      strokeWidth: 2.5,
     },
     markerEnd: {
       type: MarkerType.ArrowClosed,
-      width: 16,
-      height: 16,
-      color: '#334155',
+      width: 18,
+      height: 18,
+      color: '#2563eb',
     },
   }
 }
@@ -135,6 +135,7 @@ export default function CircuitCanvas() {
   const components = useCircuitStore((state) => state.doc.components)
   const wires = useCircuitStore((state) => state.doc.wires)
   const addWire = useCircuitStore((state) => state.addWire)
+  const clearCanvas = useCircuitStore((state) => state.clearCanvas)
   const selectedComponentId = useCircuitStore((state) => state.selectedComponentId)
   const selectComponent = useCircuitStore((state) => state.selectComponent)
   const updateComponentPosition = useCircuitStore(
@@ -178,31 +179,59 @@ export default function CircuitCanvas() {
     selectComponent(node.id)
   }
 
+  function handleClearCanvas() {
+    if (components.length === 0) {
+      return
+    }
+
+    const confirmed = window.confirm(i18n.t('editor.canvas.clearCanvasConfirm'))
+
+    if (!confirmed) {
+      return
+    }
+
+    clearCanvas()
+  }
+
   return (
-    <div
-      style={{
-        width: '100%',
-        height: '680px',
-        border: '1px solid #d6d3d1',
-        borderRadius: 18,
-        overflow: 'hidden',
-        background: '#fcfcf9',
-      }}
-    >
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        fitView
-        connectionMode={ConnectionMode.Loose}
-        onConnect={handleConnect}
-        onNodeDragStop={handleNodeDragStop}
-        onNodeClick={handleNodeClick}
-        onPaneClick={() => selectComponent(null)}
-      >
-        <Background />
-        <Controls />
-      </ReactFlow>
-    </div>
+    <>
+      <div className="canvas-stage">
+        {components.length === 0 ? (
+          <div className="canvas-empty empty-state">
+            <div className="field-label">{i18n.t('editor.canvas.emptyTitle')}</div>
+            <p className="support-text">{i18n.t('editor.canvas.emptyBody')}</p>
+          </div>
+        ) : null}
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          fitView
+          connectionMode={ConnectionMode.Loose}
+          onConnect={handleConnect}
+          onNodeDragStop={handleNodeDragStop}
+          onNodeClick={handleNodeClick}
+          onPaneClick={() => selectComponent(null)}
+        >
+          <Background />
+          <Controls />
+        </ReactFlow>
+      </div>
+      <div className="canvas-foot">
+        <div className="canvas-legend">
+          <div className="mini-chip">{i18n.t('editor.canvas.legend.drag')}</div>
+          <div className="mini-chip">{i18n.t('editor.canvas.legend.connect')}</div>
+          <div className="mini-chip">{i18n.t('editor.canvas.legend.inspect')}</div>
+        </div>
+        <button
+          type="button"
+          className="toolbar-button canvas-foot-action"
+          onClick={handleClearCanvas}
+          disabled={components.length === 0}
+        >
+          {i18n.t('editor.canvas.clearCanvas')}
+        </button>
+      </div>
+    </>
   )
 }

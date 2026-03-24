@@ -1,15 +1,60 @@
 const en = {
   app: {
+    eyebrow: 'Circuit Analysis Studio',
     title: 'Circuit Tutor Editor',
+    titleAccent: 'Workbench',
     description:
       'Build teaching circuits visually, connect components on the canvas, and export a structured representation for AI reasoning.',
     badge: 'Structure -> Semantics -> Export',
+    workflow: {
+      capture: 'Place symbols with one click',
+      connect: 'Link pins into meaningful nodes',
+      export: 'Package the circuit for AI solving',
+    },
+    stats: {
+      components: 'Components',
+      wires: 'Wires',
+      namedNodes: 'Named Nodes',
+    },
+    side: {
+      statusTitle: 'Session Status',
+      statusDescription:
+        'This workspace is tuned for fast diagram assembly, annotation, and clean export diagnostics.',
+      ready: 'Export protocol ready',
+      needsGround: 'Add ground to complete the draft',
+      selected: 'Selected: {{id}}',
+      noSelection: 'No component selected',
+      languageKicker: 'Language',
+      languageTitle: 'Bilingual review',
+      languageDescription:
+        'Switch labels instantly while keeping the same circuit state and structure.',
+      protocolKicker: 'Method',
+      protocolTitle: 'Editing protocol',
+      protocolDescription:
+        'Use the studio from left to right: choose a part, place it, then refine and export.',
+    },
+    protocol: {
+      step1Title: 'Assemble',
+      step1Body: 'Add resistors, sources, switches, and reference nodes from the palette.',
+      step2Title: 'Annotate',
+      step2Body: 'Select a symbol to edit values, node names, and controlled-source relations.',
+      step3Title: 'Export',
+      step3Body: 'Inspect diagnostics before copying the JSON payload into your solver workflow.',
+    },
+    workspace: {
+      title: 'Teaching Circuit Workbench',
+      description:
+        'A responsive editor with a guided palette, structured property forms, and a presentation-grade canvas.',
+      mode: 'Workbench Mode',
+      focus: 'Accessibility-ready',
+    },
     language: {
       en: 'EN',
       zhCN: '中文',
     },
   },
   palette: {
+    kicker: 'Palette',
     title: 'Palette',
     subtitle: 'Click a component to add it to the canvas.',
     componentMeta: '{{prefix}} · {{pins}}',
@@ -28,12 +73,38 @@ const en = {
       ground: 'Ground',
     },
   },
+  editor: {
+    canvas: {
+      kicker: 'Canvas',
+      title: 'Topology Surface',
+      subtitle: 'Drag devices, wire pins, and keep spatial relationships clear for teaching.',
+      count: '{{count}} devices placed',
+      selected: 'Inspecting {{id}}',
+      noneSelected: 'Tap a device to inspect it',
+      emptyTitle: 'Start on the left',
+      emptyBody:
+        'Add a component from the palette to initialize the circuit and reveal the connection graph.',
+      clearCanvas: 'Clear canvas',
+      clearCanvasConfirm:
+        'Clear the current canvas? All components and wires will be removed.',
+      legend: {
+        drag: 'Drag devices to reflow the schematic',
+        connect: 'Pull between handles to create a wire',
+        inspect: 'Click a device to open detailed controls',
+      },
+    },
+  },
   panel: {
+    kicker: 'Inspector',
     properties: {
       title: 'Properties',
+      subtitle: 'Fine-tune labels, electrical values, node names, and export state.',
+      emptyTitle: 'Select a device',
       empty:
         'Select a component on the canvas to edit its label, parameters, switch state, and node names.',
       componentMeta: '{{component}} · {{id}}',
+      selectedTitle: 'Focused component',
+      selectedBody: '{{component}} is active. Changes here update {{id}} immediately.',
     },
     fields: {
       label: 'Label',
@@ -66,6 +137,7 @@ const en = {
     },
     control: {
       title: 'Control Relation',
+      mode: 'Relation mode',
       selectMode: 'Select mode',
       gain: 'Gain',
       gainUnit: 'Gain Unit',
@@ -77,11 +149,17 @@ const en = {
     },
     export: {
       title: 'Export',
+      subtitle: 'Generate a structured payload and review diagnostics before copying.',
       exportJson: 'Export JSON',
       copyJson: 'Copy JSON',
+      previewTitle: 'Payload preview',
       previewEmpty: 'Click Export JSON to preview the structured payload.',
       copySuccess: 'Copied payload JSON to clipboard.',
       copyError: 'Copy failed. Clipboard permission may be unavailable.',
+      summaryGround: 'Ground present',
+      summaryPins: 'Unconnected pins',
+      summaryNodes: 'Node conflicts',
+      summaryConflicts: 'Export conflicts',
       hasGround: 'Ground present: {{value}}',
       unconnectedPins: 'Unconnected pins: {{count}}',
       namedNodeConflicts: 'Named node conflicts: {{count}}',

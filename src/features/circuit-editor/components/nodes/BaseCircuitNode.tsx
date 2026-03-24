@@ -33,41 +33,58 @@ type BaseCircuitNodeProps = NodeProps<CircuitFlowNodeData> & {
   handles: HandleConfig[]
 }
 
-const containerStyle: CSSProperties = {
-  minWidth: 120,
-  minHeight: 76,
-  border: '1.5px solid #1f2937',
-  borderRadius: 12,
-  background: '#fffef7',
-  boxShadow: '0 3px 10px rgba(15, 23, 42, 0.08)',
-  color: '#0f172a',
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: 8,
-  padding: '10px 16px',
-  position: 'relative',
-}
-
-const labelStyle: CSSProperties = {
-  fontSize: 13,
-  fontWeight: 600,
-  lineHeight: 1,
-}
-
-const parameterStyle: CSSProperties = {
-  fontSize: 11,
-  color: '#475569',
-  lineHeight: 1,
-}
-
 const handleBaseStyle: CSSProperties = {
-  width: 10,
-  height: 10,
+  width: 12,
+  height: 12,
   borderRadius: 999,
-  border: '1px solid #0f172a',
-  background: '#f8fafc',
+  border: '2px solid rgba(20, 35, 58, 0.4)',
+  background: '#ffffff',
+}
+
+function getNodeAccent(kind: CircuitFlowNodeKind) {
+  switch (kind) {
+    case 'resistor':
+    case 'conductance':
+    case 'generic_load':
+      return {
+        accent: '#2563eb',
+        soft: 'rgba(219, 234, 254, 0.86)',
+        badge: 'Passive',
+      }
+    case 'capacitor':
+    case 'inductor':
+      return {
+        accent: '#7c3aed',
+        soft: 'rgba(237, 233, 254, 0.86)',
+        badge: 'Reactive',
+      }
+    case 'voltage_source':
+    case 'current_source':
+      return {
+        accent: '#f97316',
+        soft: 'rgba(255, 237, 213, 0.92)',
+        badge: 'Source',
+      }
+    case 'controlled_voltage_source':
+    case 'controlled_current_source':
+      return {
+        accent: '#0f766e',
+        soft: 'rgba(204, 251, 241, 0.92)',
+        badge: 'Control',
+      }
+    case 'ground':
+      return {
+        accent: '#0f172a',
+        soft: 'rgba(226, 232, 240, 0.92)',
+        badge: 'Ref',
+      }
+    default:
+      return {
+        accent: '#475569',
+        soft: 'rgba(241, 245, 249, 0.92)',
+        badge: 'Switch',
+      }
+  }
 }
 
 export function BaseCircuitNode({
@@ -76,16 +93,18 @@ export function BaseCircuitNode({
   symbol,
   handles,
 }: BaseCircuitNodeProps) {
+  const accent = getNodeAccent(data.kind)
+
   return (
     <div
+      className="circuit-node"
+      data-selected={selected}
       style={{
-        ...containerStyle,
-        borderColor: selected ? '#0f766e' : containerStyle.borderColor,
-        boxShadow: selected
-          ? '0 0 0 2px rgba(15, 118, 110, 0.18), 0 8px 18px rgba(15, 23, 42, 0.12)'
-          : containerStyle.boxShadow,
+        ['--node-accent' as string]: accent.accent,
+        ['--node-accent-soft' as string]: accent.soft,
       }}
     >
+      <div className="circuit-node-badge">{accent.badge}</div>
       {handles.map((handle) => (
         <Handle
           key={`${data.kind}-${handle.id}`}
@@ -95,9 +114,11 @@ export function BaseCircuitNode({
           style={{ ...handleBaseStyle, ...handle.style }}
         />
       ))}
-      <div style={labelStyle}>{data.label}</div>
+      <div className="circuit-node-label">{data.label}</div>
       <div>{symbol}</div>
-      {data.parameterText ? <div style={parameterStyle}>{data.parameterText}</div> : null}
+      {data.parameterText ? (
+        <div className="circuit-node-parameter">{data.parameterText}</div>
+      ) : null}
     </div>
   )
 }

@@ -205,8 +205,8 @@ pnpm dev
 
 ## 作者联系
 
-- **微信**: laohaibao2025
-- **邮箱**: 75271002@qq.com
+- **微信**: tlxiaoyun
+- **邮箱**: tlxiaoyun@qq.com
 
 ## 打赏
 

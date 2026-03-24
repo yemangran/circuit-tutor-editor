@@ -9,14 +9,16 @@ import {
   WireEndpoint,
 } from '../types/circuit'
 
-const initialDoc: CircuitDocument = {
-  components: [],
-  wires: [],
-  annotations: [],
-  namedNodes: [],
-  controlRelations: [],
-  solveTargets: [],
-  meta: { title: 'Untitled Circuit' }
+function createInitialDoc(): CircuitDocument {
+  return {
+    components: [],
+    wires: [],
+    annotations: [],
+    namedNodes: [],
+    controlRelations: [],
+    solveTargets: [],
+    meta: { title: 'Untitled Circuit' },
+  }
 }
 
 const DEFAULT_COMPONENT_POSITION = {
@@ -43,6 +45,7 @@ export const useCircuitStore = create<{
     position?: { x: number; y: number },
   ) => void
   addWire: (from: WireEndpoint, to: WireEndpoint) => void
+  clearCanvas: () => void
   updateComponentPosition: (
     componentId: string,
     position: { x: number; y: number },
@@ -62,7 +65,7 @@ export const useCircuitStore = create<{
   ) => void
   removeControlRelation: (targetComponentId: string) => void
 }>((set) => ({
-  doc: initialDoc,
+  doc: createInitialDoc(),
   selectedComponentId: null,
   selectComponent: (componentId) => set({ selectedComponentId: componentId }),
   addComponent: (kind, position) =>
@@ -248,5 +251,10 @@ export const useCircuitStore = create<{
           wires: [...state.doc.wires, wire],
         },
       }
+    }),
+  clearCanvas: () =>
+    set({
+      doc: createInitialDoc(),
+      selectedComponentId: null,
     }),
 }))

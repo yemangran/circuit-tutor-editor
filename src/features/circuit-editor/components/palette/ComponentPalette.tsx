@@ -2,84 +2,59 @@ import { componentTemplates } from '../../componentTemplates'
 import { useCircuitStore } from '../../store/circuitStore'
 import { useTranslation } from 'react-i18next'
 
-const paletteStyle = {
-  width: 260,
-  padding: 16,
-  border: '1px solid #d6d3d1',
-  borderRadius: 16,
-  background: '#fffdf8',
-  display: 'flex',
-  flexDirection: 'column' as const,
-  gap: 12,
-  boxShadow: '0 4px 14px rgba(15, 23, 42, 0.06)',
-}
-
-const gridStyle = {
-  display: 'grid',
-  gridTemplateColumns: '1fr',
-  gap: 10,
-}
-
-const buttonStyle = {
-  width: '100%',
-  textAlign: 'left' as const,
-  border: '1px solid #d6d3d1',
-  borderRadius: 12,
-  background: '#ffffff',
-  padding: '10px 12px',
-  cursor: 'pointer',
-}
-
-const titleStyle = {
-  margin: 0,
-  fontSize: 16,
-  fontWeight: 700,
-  color: '#0f172a',
-}
-
-const subtitleStyle = {
-  margin: 0,
-  fontSize: 12,
-  color: '#64748b',
-  lineHeight: 1.4,
-}
-
-const buttonTitleStyle = {
-  fontSize: 13,
-  fontWeight: 700,
-  color: '#0f172a',
-}
-
-const buttonMetaStyle = {
-  marginTop: 4,
-  fontSize: 11,
-  color: '#475569',
+function getComponentHint(kind: keyof typeof componentTemplates) {
+  switch (kind) {
+    case 'resistor':
+      return 'R'
+    case 'conductance':
+      return 'S'
+    case 'capacitor':
+      return 'F'
+    case 'inductor':
+      return 'H'
+    case 'voltage_source':
+      return 'V'
+    case 'current_source':
+      return 'A'
+    case 'controlled_voltage_source':
+      return 'CV'
+    case 'controlled_current_source':
+      return 'CA'
+    case 'generic_load':
+      return 'W'
+    case 'switch_spst':
+      return 'SPST'
+    case 'switch_spdt':
+      return 'SPDT'
+    case 'ground':
+      return 'GND'
+  }
 }
 
 export function ComponentPalette() {
   const addComponent = useCircuitStore((state) => state.addComponent)
   const { t } = useTranslation()
+  const templates = Object.values(componentTemplates)
 
   return (
-    <aside style={paletteStyle}>
-      <div>
-        <h2 style={titleStyle}>{t('palette.title')}</h2>
-        <p style={subtitleStyle}>{t('palette.subtitle')}</p>
+    <aside className="studio-card palette-panel">
+      <div className="panel-header">
+        <h2 className="panel-title">{t('palette.title')}</h2>
+        <p className="panel-subtitle">{t('palette.subtitle')}</p>
       </div>
-      <div style={gridStyle}>
-        {Object.values(componentTemplates).map((template) => (
+
+      <div className="palette-grid palette-grid-compact">
+        {templates.map((template) => (
           <button
             key={template.kind}
             type="button"
-            style={buttonStyle}
+            className="palette-button palette-tile"
             onClick={() => addComponent(template.kind)}
+            title={t(`palette.components.${template.kind}`)}
           >
-            <div style={buttonTitleStyle}>{t(`palette.components.${template.kind}`)}</div>
-            <div style={buttonMetaStyle}>
-              {t('palette.componentMeta', {
-                prefix: template.labelPrefix,
-                pins: template.pins.join(', '),
-              })}
+            <div className="palette-tile-hint">{getComponentHint(template.kind)}</div>
+            <div className="palette-button-title palette-tile-title">
+              {t(`palette.components.${template.kind}`)}
             </div>
           </button>
         ))}
