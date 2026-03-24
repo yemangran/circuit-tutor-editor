@@ -1,5 +1,10 @@
-import type { CSSProperties, ReactNode } from 'react'
-import { Handle, Position, type NodeProps } from 'reactflow'
+import { useEffect, type CSSProperties, type ReactNode } from 'react'
+import {
+  Handle,
+  Position,
+  useUpdateNodeInternals,
+  type NodeProps,
+} from 'reactflow'
 import i18n from '../../../../i18n'
 
 export type CircuitFlowNodeKind =
@@ -21,6 +26,7 @@ export type CircuitFlowNodeData = {
   label: string
   pins: string[]
   parameterText?: string
+  rotation: 0 | 90 | 180 | 270
 }
 
 type HandleConfig = {
@@ -40,6 +46,52 @@ const handleBaseStyle: CSSProperties = {
   borderRadius: 999,
   border: '2px solid rgba(20, 35, 58, 0.4)',
   background: '#ffffff',
+}
+
+function getRotatedPosition(
+  position: Position,
+  rotation: CircuitFlowNodeData['rotation'],
+) {
+  switch (rotation) {
+    case 90:
+      if (position === Position.Left) return Position.Top
+      if (position === Position.Right) return Position.Bottom
+      if (position === Position.Top) return Position.Right
+      return Position.Left
+    case 180:
+      if (position === Position.Left) return Position.Right
+      if (position === Position.Right) return Position.Left
+      if (position === Position.Top) return Position.Bottom
+      return Position.Top
+    case 270:
+      if (position === Position.Left) return Position.Bottom
+      if (position === Position.Right) return Position.Top
+      if (position === Position.Top) return Position.Left
+      return Position.Right
+    default:
+      return position
+  }
+}
+
+function getRotatedHandleStyle(
+  style: CSSProperties | undefined,
+  rotation: CircuitFlowNodeData['rotation'],
+): CSSProperties | undefined {
+  if (!style) {
+    return undefined
+  }
+
+  if (rotation === 90 || rotation === 270) {
+    const axisValue = style.top
+
+    if (axisValue == null) {
+      return undefined
+    }
+
+    return { left: axisValue }
+  }
+
+  return style
 }
 
 function getNodeAccent(kind: CircuitFlowNodeKind) {
@@ -89,12 +141,18 @@ function getNodeAccent(kind: CircuitFlowNodeKind) {
 }
 
 export function BaseCircuitNode({
+  id,
   data,
   selected,
   symbol,
   handles,
 }: BaseCircuitNodeProps) {
   const accent = getNodeAccent(data.kind)
+  const updateNodeInternals = useUpdateNodeInternals()
+
+  useEffect(() => {
+    updateNodeInternals(id)
+  }, [data.rotation, id, updateNodeInternals])
 
   return (
     <div
@@ -113,12 +171,20 @@ export function BaseCircuitNode({
           key={`${data.kind}-${handle.id}`}
           id={handle.id}
           type="source"
-          position={handle.position}
-          style={{ ...handleBaseStyle, ...handle.style }}
+          position={getRotatedPosition(handle.position, data.rotation)}
+          style={{
+            ...handleBaseStyle,
+            ...getRotatedHandleStyle(handle.style, data.rotation),
+          }}
         />
       ))}
       <div className="circuit-node-label">{data.label}</div>
-      <div className="circuit-node-symbol">{symbol}</div>
+      <div
+        className="circuit-node-symbol"
+        style={{ transform: `rotate(${data.rotation}deg)` }}
+      >
+        {symbol}
+      </div>
       {data.parameterText ? (
         <div className="circuit-node-parameter">{data.parameterText}</div>
       ) : null}

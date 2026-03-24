@@ -1,5 +1,5 @@
-import React from 'react'
-import type { DragEvent } from 'react'
+import React, { useRef, useState } from 'react'
+import type { DragEvent, MouseEvent as ReactMouseEvent } from 'react'
 import ReactFlow, {
   Background,
   BackgroundVariant,
@@ -100,6 +100,7 @@ function toFlowNode(component: CircuitComponent): Node<CircuitFlowNodeData> {
       label: component.label,
       pins: [...component.pins],
       parameterText: formatParameterText(component),
+      rotation: component.rotation,
     },
     draggable: true,
     selectable: true,
@@ -141,15 +142,26 @@ function isValidConnection(connection: Connection): connection is Required<
 
 export default function CircuitCanvas() {
   const { screenToFlowPosition } = useReactFlow()
+  const stageRef = useRef<HTMLDivElement>(null)
+  const [contextMenu, setContextMenu] = useState<{
+    componentId: string
+    top: number
+    left: number
+  } | null>(null)
   const components = useCircuitStore((state) => state.doc.components)
   const wires = useCircuitStore((state) => state.doc.wires)
   const addComponent = useCircuitStore((state) => state.addComponent)
   const addWire = useCircuitStore((state) => state.addWire)
   const clearCanvas = useCircuitStore((state) => state.clearCanvas)
+  const deleteComponent = useCircuitStore((state) => state.deleteComponent)
+  const duplicateComponent = useCircuitStore((state) => state.duplicateComponent)
   const selectedComponentId = useCircuitStore((state) => state.selectedComponentId)
   const selectComponent = useCircuitStore((state) => state.selectComponent)
   const updateComponentPosition = useCircuitStore(
     (state) => state.updateComponentPosition,
+  )
+  const updateComponentRotation = useCircuitStore(
+    (state) => state.updateComponentRotation,
   )
   const nodes = components.map((component) => ({
     ...toFlowNode(component),
@@ -201,6 +213,24 @@ export default function CircuitCanvas() {
   }
 
   const handleNodeClick: NodeMouseHandler = (_, node) => {
+    setContextMenu(null)
+    selectComponent(node.id)
+  }
+
+  const handleNodeContextMenu: NodeMouseHandler = (event, node) => {
+    event.preventDefault()
+
+    const stageBounds = stageRef.current?.getBoundingClientRect()
+
+    if (!stageBounds) {
+      return
+    }
+
+    setContextMenu({
+      componentId: node.id,
+      left: Math.min(event.clientX - stageBounds.left, stageBounds.width - 176),
+      top: Math.min(event.clientY - stageBounds.top, stageBounds.height - 148),
+    })
     selectComponent(node.id)
   }
 
@@ -218,6 +248,10 @@ export default function CircuitCanvas() {
     clearCanvas()
   }
 
+  function closeContextMenu() {
+    setContextMenu(null)
+  }
+
   function handleDragOver(event: DragEvent<HTMLDivElement>) {
     event.preventDefault()
     event.dataTransfer.dropEffect = 'move'
@@ -225,6 +259,7 @@ export default function CircuitCanvas() {
 
   function handleDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault()
+    closeContextMenu()
 
     const kind = event.dataTransfer.getData(PALETTE_MIME_TYPE)
 
@@ -242,9 +277,71 @@ export default function CircuitCanvas() {
     addComponent(kind, position)
   }
 
+  function handleRotateSelected() {
+    if (!contextMenu) {
+      return
+    }
+
+    const component = components.find(
+      (item) => item.id === contextMenu.componentId,
+    )
+
+    if (!component) {
+      closeContextMenu()
+      return
+    }
+
+    updateComponentRotation(
+      component.id,
+      ((component.rotation + 90) % 360) as 0 | 90 | 180 | 270,
+    )
+    closeContextMenu()
+  }
+
+  function handleDeleteSelected() {
+    if (!contextMenu) {
+      return
+    }
+
+    deleteComponent(contextMenu.componentId)
+    closeContextMenu()
+  }
+
+  function handleDuplicateSelected() {
+    if (!contextMenu) {
+      return
+    }
+
+    const component = components.find(
+      (item) => item.id === contextMenu.componentId,
+    )
+
+    if (!component) {
+      closeContextMenu()
+      return
+    }
+
+    duplicateComponent(contextMenu.componentId, {
+      x: component.position.x + CANVAS_GRID_SIZE[0] * 2,
+      y: component.position.y + CANVAS_GRID_SIZE[1] * 2,
+    })
+    closeContextMenu()
+  }
+
+  function handleCanvasContextMenu(event: ReactMouseEvent<HTMLDivElement>) {
+    if (event.target === event.currentTarget) {
+      event.preventDefault()
+      closeContextMenu()
+    }
+  }
+
   return (
     <>
-      <div className="canvas-stage">
+      <div
+        ref={stageRef}
+        className="canvas-stage"
+        onContextMenu={handleCanvasContextMenu}
+      >
         {components.length === 0 ? (
           <div className="canvas-empty empty-state">
             <div className="field-label">{i18n.t('editor.canvas.emptyTitle')}</div>
@@ -265,7 +362,11 @@ export default function CircuitCanvas() {
           onNodeDrag={handleNodeDrag}
           onNodeDragStop={handleNodeDragStop}
           onNodeClick={handleNodeClick}
-          onPaneClick={() => selectComponent(null)}
+          onNodeContextMenu={handleNodeContextMenu}
+          onPaneClick={() => {
+            closeContextMenu()
+            selectComponent(null)
+          }}
         >
           <Background
             variant={BackgroundVariant.Lines}
@@ -275,6 +376,35 @@ export default function CircuitCanvas() {
           />
           <Controls />
         </ReactFlow>
+        {contextMenu ? (
+          <div
+            className="canvas-context-menu"
+            style={{ top: contextMenu.top, left: contextMenu.left }}
+          >
+            <button
+              type="button"
+              className="canvas-context-menu-item"
+              onClick={handleRotateSelected}
+            >
+              {i18n.t('editor.contextMenu.rotate')}
+            </button>
+            <button
+              type="button"
+              className="canvas-context-menu-item"
+              onClick={handleDuplicateSelected}
+            >
+              {i18n.t('editor.contextMenu.duplicate')}
+            </button>
+            <button
+              type="button"
+              className="canvas-context-menu-item"
+              data-tone="danger"
+              onClick={handleDeleteSelected}
+            >
+              {i18n.t('editor.contextMenu.delete')}
+            </button>
+          </div>
+        ) : null}
       </div>
       <div className="canvas-foot">
         <div className="canvas-legend">

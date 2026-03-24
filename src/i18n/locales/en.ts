@@ -82,6 +82,11 @@ const en = {
       reference: 'Ref',
       switch: 'Switch',
     },
+    contextMenu: {
+      rotate: 'Rotate 90°',
+      duplicate: 'Duplicate',
+      delete: 'Delete',
+    },
     canvas: {
       kicker: 'Canvas',
       title: 'Topology Surface',
@@ -116,6 +121,9 @@ const en = {
     },
     fields: {
       label: 'Label',
+      rotation: 'Rotation',
+      rotateLeft: 'Rotate left 90°',
+      rotateRight: 'Rotate right 90°',
       parameters: 'Parameters',
       noEditableParameters: 'No editable parameters.',
       magnitude: 'Magnitude',

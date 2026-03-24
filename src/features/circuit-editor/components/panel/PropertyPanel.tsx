@@ -34,6 +34,9 @@ export function PropertyPanel() {
   const updateComponentParameter = useCircuitStore(
     (state) => state.updateComponentParameter,
   );
+  const updateComponentRotation = useCircuitStore(
+    (state) => state.updateComponentRotation,
+  );
   const updateComponentState = useCircuitStore(
     (state) => state.updateComponentState,
   );
@@ -123,6 +126,43 @@ export function PropertyPanel() {
                   updateComponentLabel(selectedComponent.id, event.target.value)
                 }
               />
+            </div>
+
+            <div className="field-stack">
+              <div className="field-label">{t("panel.fields.rotation")}</div>
+              <div className="panel-actions-row">
+                <button
+                  type="button"
+                  className="panel-action"
+                  data-tone="secondary"
+                  onClick={() =>
+                    updateComponentRotation(
+                      selectedComponent.id,
+                      ((selectedComponent.rotation + 270) %
+                        360) as 0 | 90 | 180 | 270,
+                    )
+                  }
+                >
+                  {t("panel.fields.rotateLeft")}
+                </button>
+                <button
+                  type="button"
+                  className="panel-action"
+                  data-tone="secondary"
+                  onClick={() =>
+                    updateComponentRotation(
+                      selectedComponent.id,
+                      ((selectedComponent.rotation + 90) %
+                        360) as 0 | 90 | 180 | 270,
+                    )
+                  }
+                >
+                  {t("panel.fields.rotateRight")}
+                </button>
+                <div className="palette-prefix panel-rotation-value">
+                  {selectedComponent.rotation}°
+                </div>
+              </div>
             </div>
           </div>
         </section>

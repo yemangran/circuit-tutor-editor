@@ -365,6 +365,39 @@ textarea:focus-visible {
   line-height: 1.2;
 }
 
+.palette-footer {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 2px solid rgba(141, 164, 197, 0.28);
+}
+
+.palette-repo-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(241, 245, 249, 0.86);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.palette-repo-link:hover {
+  background: rgba(37, 99, 235, 0.12);
+  color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.palette-repo-link svg {
+  flex-shrink: 0;
+}
+
 .canvas-shell {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -470,6 +503,19 @@ textarea:focus-visible {
   font-weight: 700;
 }
 
+.panel-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.panel-rotation-value {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+}
+
 .summary-card strong {
   display: block;
   margin-top: 6px;
@@ -498,6 +544,43 @@ textarea:focus-visible {
   max-width: 260px;
   z-index: 4;
   pointer-events: none;
+}
+
+.canvas-context-menu {
+  position: absolute;
+  z-index: 8;
+  min-width: 160px;
+  padding: 8px;
+  border: 2px solid rgba(141, 164, 197, 0.32);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 32px rgba(15, 23, 42, 0.18);
+  display: grid;
+  gap: 6px;
+}
+
+.canvas-context-menu-item {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 0;
+  background: rgba(241, 245, 249, 0.86);
+  color: var(--text-strong);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.canvas-context-menu-item:hover {
+  background: rgba(219, 234, 254, 0.86);
+  color: var(--primary);
+}
+
+.canvas-context-menu-item[data-tone='danger']:hover {
+  background: rgba(254, 226, 226, 0.9);
+  color: #b91c1c;
 }
 
 .react-flow__renderer,
@@ -571,6 +654,7 @@ textarea:focus-visible {
   display: grid;
   place-items: center;
   justify-self: center;
+  transform-origin: center;
 }
 
 .circuit-node-parameter {

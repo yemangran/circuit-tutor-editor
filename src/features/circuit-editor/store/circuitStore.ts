@@ -3,6 +3,7 @@ import { componentTemplates, createComponentFromTemplate } from '../componentTem
 import {
   ControlRelation,
   CircuitDocument,
+  CircuitComponent,
   ComponentKind,
   ParameterValue,
   CircuitWire,
@@ -36,6 +37,36 @@ function getDefaultComponentPosition(componentCount: number) {
   }
 }
 
+function getNextComponentIndex(
+  components: CircuitComponent[],
+  kind: ComponentKind,
+) {
+  const labelPrefix = componentTemplates[kind].labelPrefix
+  const usedIndexes = new Set(
+    components
+      .filter(
+        (component) => componentTemplates[component.kind].labelPrefix === labelPrefix,
+      )
+      .map((component) => Number(component.id.slice(labelPrefix.length)))
+      .filter((value) => Number.isFinite(value) && value > 0),
+  )
+
+  let nextIndex = 1
+
+  while (usedIndexes.has(nextIndex)) {
+    nextIndex += 1
+  }
+
+  return nextIndex
+}
+
+function getNextComponentLabel(
+  components: CircuitComponent[],
+  kind: ComponentKind,
+) {
+  return `${componentTemplates[kind].labelPrefix}${getNextComponentIndex(components, kind)}`
+}
+
 export const useCircuitStore = create<{
   doc: CircuitDocument
   selectedComponentId: string | null
@@ -46,9 +77,18 @@ export const useCircuitStore = create<{
   ) => void
   addWire: (from: WireEndpoint, to: WireEndpoint) => void
   clearCanvas: () => void
+  deleteComponent: (componentId: string) => void
+  duplicateComponent: (
+    componentId: string,
+    position?: { x: number; y: number },
+  ) => void
   updateComponentPosition: (
     componentId: string,
     position: { x: number; y: number },
+  ) => void
+  updateComponentRotation: (
+    componentId: string,
+    rotation: 0 | 90 | 180 | 270,
   ) => void
   updateComponentLabel: (componentId: string, label: string) => void
   updateComponentParameter: (
@@ -70,20 +110,90 @@ export const useCircuitStore = create<{
   selectComponent: (componentId) => set({ selectedComponentId: componentId }),
   addComponent: (kind, position) =>
     set((state) => {
-      const labelPrefix = componentTemplates[kind].labelPrefix
-      const nextIndex =
-        state.doc.components.filter(
-          (component) => componentTemplates[component.kind].labelPrefix === labelPrefix,
-        ).length + 1
       const resolvedPosition =
         position ?? getDefaultComponentPosition(state.doc.components.length)
-      const component = createComponentFromTemplate(kind, resolvedPosition, nextIndex)
+      const component = createComponentFromTemplate(
+        kind,
+        resolvedPosition,
+        getNextComponentIndex(state.doc.components, kind),
+      )
 
       return {
         doc: {
           ...state.doc,
           components: [...state.doc.components, component],
         },
+      }
+    }),
+  deleteComponent: (componentId) =>
+    set((state) => ({
+      doc: {
+        ...state.doc,
+        components: state.doc.components.filter((component) => component.id !== componentId),
+        wires: state.doc.wires.filter(
+          (wire) =>
+            wire.from.componentId !== componentId && wire.to.componentId !== componentId,
+        ),
+        namedNodes: state.doc.namedNodes.filter(
+          (node) => !node.id.startsWith(`${componentId}:`),
+        ),
+        controlRelations: state.doc.controlRelations.filter(
+          (relation) => relation.targetComponentId !== componentId,
+        ),
+        annotations: state.doc.annotations.filter(
+          (annotation) =>
+            annotation.targetComponentId !== componentId &&
+            annotation.fromPinRef?.componentId !== componentId &&
+            annotation.toPinRef?.componentId !== componentId &&
+            annotation.positivePinRef?.componentId !== componentId &&
+            annotation.negativePinRef?.componentId !== componentId,
+        ),
+        solveTargets: state.doc.solveTargets.filter(
+          (target) => target.componentId !== componentId,
+        ),
+      },
+      selectedComponentId:
+        state.selectedComponentId === componentId ? null : state.selectedComponentId,
+    })),
+  duplicateComponent: (componentId, position) =>
+    set((state) => {
+      const sourceComponent = state.doc.components.find(
+        (component) => component.id === componentId,
+      )
+
+      if (!sourceComponent) {
+        return state
+      }
+
+      const nextLabel = getNextComponentLabel(state.doc.components, sourceComponent.kind)
+      const nextPosition = position ?? {
+        x: sourceComponent.position.x + 40,
+        y: sourceComponent.position.y + 40,
+      }
+
+      return {
+        doc: {
+          ...state.doc,
+          components: [
+            ...state.doc.components,
+            {
+              ...sourceComponent,
+              id: nextLabel,
+              label: nextLabel,
+              position: nextPosition,
+              parameters: Object.fromEntries(
+                Object.entries(sourceComponent.parameters).map(([key, value]) => [
+                  key,
+                  { ...value },
+                ]),
+              ),
+              metadata: sourceComponent.metadata
+                ? { ...sourceComponent.metadata }
+                : undefined,
+            },
+          ],
+        },
+        selectedComponentId: nextLabel,
       }
     }),
   updateComponentPosition: (componentId, position) =>
@@ -109,6 +219,15 @@ export const useCircuitStore = create<{
         },
       }
     }),
+  updateComponentRotation: (componentId, rotation) =>
+    set((state) => ({
+      doc: {
+        ...state.doc,
+        components: state.doc.components.map((component) =>
+          component.id === componentId ? { ...component, rotation } : component,
+        ),
+      },
+    })),
   updateComponentLabel: (componentId, label) =>
     set((state) => ({
       doc: {

@@ -77,6 +77,11 @@ const zhCN = {
       reference: '参考',
       switch: '开关',
     },
+    contextMenu: {
+      rotate: '旋转 90°',
+      duplicate: '复制元件',
+      delete: '删除元件',
+    },
     canvas: {
       kicker: '画布',
       title: '拓扑画布',
@@ -108,6 +113,9 @@ const zhCN = {
     },
     fields: {
       label: '标签',
+      rotation: '旋转',
+      rotateLeft: '左转 90°',
+      rotateRight: '右转 90°',
       parameters: '参数',
       noEditableParameters: '没有可编辑参数。',
       magnitude: '数值',
