@@ -1,4 +1,5 @@
 import CircuitEditor from './features/circuit-editor/components/CircuitEditor'
+import { useTranslation } from 'react-i18next'
 
 const pageStyle = {
   minHeight: '100vh',
@@ -53,17 +54,42 @@ const workspaceStyle = {
 }
 
 export default function App() {
+  const { t, i18n } = useTranslation()
+
   return (
     <main style={pageStyle}>
       <header style={headerStyle}>
         <div>
-          <h1 style={titleStyle}>Circuit Tutor Editor</h1>
+          <h1 style={titleStyle}>{t('app.title')}</h1>
           <p style={descriptionStyle}>
-            Build teaching circuits visually, connect components on the canvas, and
-            export a structured representation for AI reasoning.
+            {t('app.description')}
           </p>
         </div>
-        <div style={badgeStyle}>Structure -&gt; Semantics -&gt; Export</div>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+          <button
+            type="button"
+            style={{
+              ...badgeStyle,
+              opacity: i18n.resolvedLanguage === 'en' ? 1 : 0.7,
+              cursor: 'pointer',
+            }}
+            onClick={() => void i18n.changeLanguage('en')}
+          >
+            {t('app.language.en')}
+          </button>
+          <button
+            type="button"
+            style={{
+              ...badgeStyle,
+              opacity: i18n.resolvedLanguage === 'zh-CN' ? 1 : 0.7,
+              cursor: 'pointer',
+            }}
+            onClick={() => void i18n.changeLanguage('zh-CN')}
+          >
+            {t('app.language.zhCN')}
+          </button>
+          <div style={badgeStyle}>{t('app.badge')}</div>
+        </div>
       </header>
       <section style={workspaceStyle}>
         <CircuitEditor />

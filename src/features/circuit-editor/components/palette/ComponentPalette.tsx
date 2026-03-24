@@ -1,5 +1,6 @@
 import { componentTemplates } from '../../componentTemplates'
 import { useCircuitStore } from '../../store/circuitStore'
+import { useTranslation } from 'react-i18next'
 
 const paletteStyle = {
   width: 260,
@@ -57,12 +58,13 @@ const buttonMetaStyle = {
 
 export function ComponentPalette() {
   const addComponent = useCircuitStore((state) => state.addComponent)
+  const { t } = useTranslation()
 
   return (
     <aside style={paletteStyle}>
       <div>
-        <h2 style={titleStyle}>Palette</h2>
-        <p style={subtitleStyle}>Click a component to add it to the canvas.</p>
+        <h2 style={titleStyle}>{t('palette.title')}</h2>
+        <p style={subtitleStyle}>{t('palette.subtitle')}</p>
       </div>
       <div style={gridStyle}>
         {Object.values(componentTemplates).map((template) => (
@@ -72,11 +74,12 @@ export function ComponentPalette() {
             style={buttonStyle}
             onClick={() => addComponent(template.kind)}
           >
-            <div style={buttonTitleStyle}>{template.displayName}</div>
+            <div style={buttonTitleStyle}>{t(`palette.components.${template.kind}`)}</div>
             <div style={buttonMetaStyle}>
-              {template.labelPrefix}
-              {' · '}
-              {template.pins.join(', ')}
+              {t('palette.componentMeta', {
+                prefix: template.labelPrefix,
+                pins: template.pins.join(', '),
+              })}
             </div>
           </button>
         ))}

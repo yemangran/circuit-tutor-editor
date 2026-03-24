@@ -28,6 +28,7 @@ import {
 import { useCircuitStore } from '../../store/circuitStore'
 import type { CircuitComponent, CircuitWire } from '../../types/circuit'
 import type { CircuitFlowNodeData } from '../nodes'
+import i18n from '../../../../i18n'
 
 const nodeTypes = {
   resistor: ResistorNode,
@@ -48,13 +49,24 @@ function formatParameterText(component: CircuitComponent): string | undefined {
   const parameterEntries = Object.entries(component.parameters)
 
   if (parameterEntries.length === 0) {
+    if (component.metadata?.state === 'open') {
+      return i18n.t('panel.switch.open')
+    }
+
+    if (component.metadata?.state === 'closed') {
+      return i18n.t('panel.switch.closed')
+    }
+
     return component.metadata?.state
   }
 
   const [parameterKey, parameterValue] = parameterEntries[0]
+  const parameterLabel = i18n.t(`panel.parameterNames.${parameterKey}`, {
+    defaultValue: parameterKey,
+  })
 
   if (parameterValue.isUnknown) {
-    return `${parameterKey}: ?`
+    return `${parameterLabel}: ?`
   }
 
   if (parameterValue.magnitude != null) {

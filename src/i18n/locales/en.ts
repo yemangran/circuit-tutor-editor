@@ -1,0 +1,93 @@
+const en = {
+  app: {
+    title: 'Circuit Tutor Editor',
+    description:
+      'Build teaching circuits visually, connect components on the canvas, and export a structured representation for AI reasoning.',
+    badge: 'Structure -> Semantics -> Export',
+    language: {
+      en: 'EN',
+      zhCN: '中文',
+    },
+  },
+  palette: {
+    title: 'Palette',
+    subtitle: 'Click a component to add it to the canvas.',
+    componentMeta: '{{prefix}} · {{pins}}',
+    components: {
+      resistor: 'Resistor',
+      conductance: 'Conductance',
+      capacitor: 'Capacitor',
+      inductor: 'Inductor',
+      voltage_source: 'Voltage Source',
+      current_source: 'Current Source',
+      controlled_voltage_source: 'Controlled Voltage Source',
+      controlled_current_source: 'Controlled Current Source',
+      generic_load: 'Generic Load',
+      switch_spst: 'SPST Switch',
+      switch_spdt: 'SPDT Switch',
+      ground: 'Ground',
+    },
+  },
+  panel: {
+    properties: {
+      title: 'Properties',
+      empty:
+        'Select a component on the canvas to edit its label, parameters, switch state, and node names.',
+      componentMeta: '{{component}} · {{id}}',
+    },
+    fields: {
+      label: 'Label',
+      parameters: 'Parameters',
+      noEditableParameters: 'No editable parameters.',
+      magnitude: 'Magnitude',
+      unit: 'Unit',
+      unknown: 'Unknown',
+      switchState: 'Switch State',
+      nodeLabels: 'Node Labels',
+      currentNode: 'Current node: {{label}}',
+      unresolved: 'Unresolved',
+      nodeLabelPlaceholder: 'Set node label',
+      booleanTrue: 'Yes',
+      booleanFalse: 'No',
+    },
+    switch: {
+      open: 'Open',
+      closed: 'Closed',
+    },
+    parameterNames: {
+      resistance: 'Resistance',
+      conductance: 'Conductance',
+      capacitance: 'Capacitance',
+      inductance: 'Inductance',
+      voltage: 'Voltage',
+      current: 'Current',
+      power: 'Power',
+      gain: 'Gain',
+    },
+    control: {
+      title: 'Control Relation',
+      selectMode: 'Select mode',
+      gain: 'Gain',
+      gainUnit: 'Gain Unit',
+      positiveNode: 'Positive Node',
+      negativeNode: 'Negative Node',
+      branch: 'Branch',
+      remove: 'Remove Control Relation',
+      empty: 'Choose a mode to create the control relation for this controlled source.',
+    },
+    export: {
+      title: 'Export',
+      exportJson: 'Export JSON',
+      copyJson: 'Copy JSON',
+      previewEmpty: 'Click Export JSON to preview the structured payload.',
+      copySuccess: 'Copied payload JSON to clipboard.',
+      copyError: 'Copy failed. Clipboard permission may be unavailable.',
+      hasGround: 'Ground present: {{value}}',
+      unconnectedPins: 'Unconnected pins: {{count}}',
+      namedNodeConflicts: 'Named node conflicts: {{count}}',
+      conflicts: 'Conflicts: {{count}}',
+    },
+  },
+} as const
+
+export default en

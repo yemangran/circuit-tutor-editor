@@ -4,6 +4,7 @@ import { resolveNodes } from '../../resolveNodes'
 import { useCircuitStore } from '../../store/circuitStore'
 import type { ControlRelation, ParameterValue } from '../../types/circuit'
 import { makePinKey } from '../../unionFind'
+import { useTranslation } from 'react-i18next'
 
 const panelStyle = {
   width: 320,
@@ -137,6 +138,7 @@ function isVoltageControlled(mode: ControlRelation['mode']) {
 }
 
 export function PropertyPanel() {
+  const { t } = useTranslation()
   const doc = useCircuitStore((state) => state.doc)
   const selectedComponentId = useCircuitStore((state) => state.selectedComponentId)
   const updateComponentLabel = useCircuitStore((state) => state.updateComponentLabel)
@@ -163,10 +165,9 @@ export function PropertyPanel() {
     return (
       <aside style={panelStyle}>
         <div style={sectionStyle}>
-          <h2 style={headingStyle}>Properties</h2>
+          <h2 style={headingStyle}>{t('panel.properties.title')}</h2>
           <div style={emptyStateStyle}>
-            Select a component on the canvas to edit its label, parameters,
-            switch state, and node names.
+            {t('panel.properties.empty')}
           </div>
         </div>
       </aside>
@@ -204,14 +205,17 @@ export function PropertyPanel() {
   return (
     <aside style={{ ...panelStyle, overflowY: 'auto' }}>
       <div style={sectionStyle}>
-        <h2 style={headingStyle}>Properties</h2>
+        <h2 style={headingStyle}>{t('panel.properties.title')}</h2>
         <div style={metaStyle}>
-          {selectedComponent.kind} · {selectedComponent.id}
+          {t('panel.properties.componentMeta', {
+            component: t(`palette.components.${selectedComponent.kind}`),
+            id: selectedComponent.id,
+          })}
         </div>
       </div>
 
       <div style={sectionStyle}>
-        <div style={labelStyle}>Label</div>
+        <div style={labelStyle}>{t('panel.fields.label')}</div>
         <input
           style={inputStyle}
           value={selectedComponent.label}
@@ -222,16 +226,18 @@ export function PropertyPanel() {
       </div>
 
       <div style={sectionStyle}>
-        <div style={labelStyle}>Parameters</div>
+        <div style={labelStyle}>{t('panel.fields.parameters')}</div>
         {Object.entries(selectedComponent.parameters).length === 0 ? (
-          <div style={metaStyle}>No editable parameters.</div>
+          <div style={metaStyle}>{t('panel.fields.noEditableParameters')}</div>
         ) : (
           Object.entries(selectedComponent.parameters).map(([key, parameter]) => (
             <div key={key} style={pinRowStyle}>
-              <div style={labelStyle}>{key}</div>
+              <div style={labelStyle}>
+                {t(`panel.parameterNames.${key}`, { defaultValue: key })}
+              </div>
               <div style={rowStyle}>
                 <div style={fieldStyle}>
-                  <div style={metaStyle}>Magnitude</div>
+                  <div style={metaStyle}>{t('panel.fields.magnitude')}</div>
                   <input
                     style={inputStyle}
                     type="number"
@@ -247,7 +253,7 @@ export function PropertyPanel() {
                   />
                 </div>
                 <div style={fieldStyle}>
-                  <div style={metaStyle}>Unit</div>
+                  <div style={metaStyle}>{t('panel.fields.unit')}</div>
                   <input
                     style={inputStyle}
                     value={parameter.unit ?? ''}
@@ -269,7 +275,7 @@ export function PropertyPanel() {
                     })
                   }
                 />
-                Unknown
+                {t('panel.fields.unknown')}
               </label>
             </div>
           ))
@@ -279,7 +285,7 @@ export function PropertyPanel() {
       {(selectedComponent.kind === 'switch_spst' ||
         selectedComponent.kind === 'switch_spdt') && (
         <div style={sectionStyle}>
-          <div style={labelStyle}>Switch State</div>
+          <div style={labelStyle}>{t('panel.fields.switchState')}</div>
           <select
             style={inputStyle}
             value={selectedComponent.metadata?.state ?? ''}
@@ -289,8 +295,8 @@ export function PropertyPanel() {
           >
             {selectedComponent.kind === 'switch_spst' ? (
               <>
-                <option value="open">open</option>
-                <option value="closed">closed</option>
+                <option value="open">{t('panel.switch.open')}</option>
+                <option value="closed">{t('panel.switch.closed')}</option>
               </>
             ) : (
               <>
@@ -303,7 +309,7 @@ export function PropertyPanel() {
       )}
 
       <div style={sectionStyle}>
-        <div style={labelStyle}>Node Labels</div>
+        <div style={labelStyle}>{t('panel.fields.nodeLabels')}</div>
         {selectedComponent.pins.map((pinId) => {
           const pinKey = makePinKey(selectedComponent.id, pinId)
           const nodeLabel = resolved.pinToNode[pinKey] ?? ''
@@ -312,11 +318,15 @@ export function PropertyPanel() {
           return (
             <div key={pinKey} style={pinRowStyle}>
               <div style={labelStyle}>{pinId}</div>
-              <div style={metaStyle}>Current node: {nodeLabel || 'Unresolved'}</div>
+              <div style={metaStyle}>
+                {t('panel.fields.currentNode', {
+                  label: nodeLabel || t('panel.fields.unresolved'),
+                })}
+              </div>
               <input
                 style={inputStyle}
                 value={namedLabel}
-                placeholder="Set node label"
+                placeholder={t('panel.fields.nodeLabelPlaceholder')}
                 onChange={(event) => {
                   const nextLabel = event.target.value
                   if (nextLabel.trim() === '') {
@@ -334,7 +344,7 @@ export function PropertyPanel() {
 
       {isControlledSource(selectedComponent.kind) && (
         <div style={sectionStyle}>
-          <div style={labelStyle}>Control Relation</div>
+          <div style={labelStyle}>{t('panel.control.title')}</div>
           <select
             style={inputStyle}
             value={controlRelation?.mode ?? ''}
@@ -352,7 +362,7 @@ export function PropertyPanel() {
               })
             }}
           >
-            <option value="">Select mode</option>
+            <option value="">{t('panel.control.selectMode')}</option>
             <option value="VCVS">VCVS</option>
             <option value="VCCS">VCCS</option>
             <option value="CCVS">CCVS</option>
@@ -363,7 +373,7 @@ export function PropertyPanel() {
             <>
               <div style={rowStyle}>
                 <div style={fieldStyle}>
-                  <div style={metaStyle}>Gain</div>
+                  <div style={metaStyle}>{t('panel.control.gain')}</div>
                   <input
                     style={inputStyle}
                     type="number"
@@ -382,7 +392,7 @@ export function PropertyPanel() {
                   />
                 </div>
                 <div style={fieldStyle}>
-                  <div style={metaStyle}>Gain Unit</div>
+                  <div style={metaStyle}>{t('panel.control.gainUnit')}</div>
                   <input
                     style={inputStyle}
                     value={controlRelation.gain.unit ?? ''}
@@ -401,7 +411,7 @@ export function PropertyPanel() {
               {isVoltageControlled(controlRelation.mode) ? (
                 <div style={rowStyle}>
                   <div style={fieldStyle}>
-                    <div style={metaStyle}>Positive Node</div>
+                    <div style={metaStyle}>{t('panel.control.positiveNode')}</div>
                     <input
                       style={inputStyle}
                       value={String(controlRelation.control.positiveNode ?? '')}
@@ -418,7 +428,7 @@ export function PropertyPanel() {
                     />
                   </div>
                   <div style={fieldStyle}>
-                    <div style={metaStyle}>Negative Node</div>
+                    <div style={metaStyle}>{t('panel.control.negativeNode')}</div>
                     <input
                       style={inputStyle}
                       value={String(controlRelation.control.negativeNode ?? '')}
@@ -437,7 +447,7 @@ export function PropertyPanel() {
                 </div>
               ) : (
                 <div style={fieldStyle}>
-                  <div style={metaStyle}>Branch</div>
+                  <div style={metaStyle}>{t('panel.control.branch')}</div>
                   <input
                     style={inputStyle}
                     value={String(controlRelation.control.branch ?? '')}
@@ -457,23 +467,20 @@ export function PropertyPanel() {
                 style={secondaryButtonStyle}
                 onClick={() => removeControlRelation(selectedComponent.id)}
               >
-                Remove Control Relation
+                {t('panel.control.remove')}
               </button>
             </>
           ) : (
-            <div style={metaStyle}>
-              Choose a mode to create the control relation for this controlled
-              source.
-            </div>
+            <div style={metaStyle}>{t('panel.control.empty')}</div>
           )}
         </div>
       )}
 
       <div style={sectionStyle}>
-        <div style={labelStyle}>Export</div>
+        <div style={labelStyle}>{t('panel.export.title')}</div>
         <div style={buttonRowStyle}>
           <button type="button" style={buttonStyle} onClick={handleExport}>
-            Export JSON
+            {t('panel.export.exportJson')}
           </button>
           <button
             type="button"
@@ -485,34 +492,45 @@ export function PropertyPanel() {
             disabled={!exportText}
             onClick={handleCopy}
           >
-            Copy JSON
+            {t('panel.export.copyJson')}
           </button>
         </div>
         {copyStatus === 'success' ? (
-          <div style={metaStyle}>Copied payload JSON to clipboard.</div>
+          <div style={metaStyle}>{t('panel.export.copySuccess')}</div>
         ) : null}
         {copyStatus === 'error' ? (
-          <div style={metaStyle}>Copy failed. Clipboard permission may be unavailable.</div>
+          <div style={metaStyle}>{t('panel.export.copyError')}</div>
         ) : null}
         {exportResult ? (
           <>
             <div style={summaryListStyle}>
-              <div>hasGround: {exportResult.diagnostics.hasGround ? 'true' : 'false'}</div>
               <div>
-                unconnectedPins: {exportResult.diagnostics.unconnectedPins.length}
+                {t('panel.export.hasGround', {
+                  value: exportResult.diagnostics.hasGround
+                    ? t('panel.fields.booleanTrue')
+                    : t('panel.fields.booleanFalse'),
+                })}
               </div>
               <div>
-                namedNodeConflicts:{' '}
-                {exportResult.diagnostics.namedNodeConflicts.length}
+                {t('panel.export.unconnectedPins', {
+                  count: exportResult.diagnostics.unconnectedPins.length,
+                })}
               </div>
-              <div>conflicts: {exportResult.conflicts.length}</div>
+              <div>
+                {t('panel.export.namedNodeConflicts', {
+                  count: exportResult.diagnostics.namedNodeConflicts.length,
+                })}
+              </div>
+              <div>
+                {t('panel.export.conflicts', {
+                  count: exportResult.conflicts.length,
+                })}
+              </div>
             </div>
             <pre style={preStyle}>{exportText}</pre>
           </>
         ) : (
-          <div style={emptyStateStyle}>
-            Click Export JSON to preview the structured payload.
-          </div>
+          <div style={emptyStateStyle}>{t('panel.export.previewEmpty')}</div>
         )}
       </div>
     </aside>
