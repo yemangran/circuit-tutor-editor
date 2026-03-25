@@ -159,9 +159,11 @@ export function BaseCircuitNode({
     <div
       className="circuit-node"
       data-selected={selected}
+      data-rotation={data.rotation}
       style={{
         ['--node-accent' as string]: accent.accent,
         ['--node-accent-soft' as string]: accent.soft,
+        transform: `rotate(${data.rotation}deg)`,
       }}
     >
       <div className="circuit-node-badge">
@@ -172,22 +174,20 @@ export function BaseCircuitNode({
           key={`${data.kind}-${handle.id}`}
           id={handle.id}
           type="source"
-          position={getRotatedPosition(handle.position, data.rotation)}
-          style={{
-            ...handleBaseStyle,
-            ...getRotatedHandleStyle(handle.style, data.rotation),
-          }}
+          position={handle.position}
+          style={handleBaseStyle}
         />
       ))}
-      <div className="circuit-node-label">{data.label}</div>
-      <div
-        className="circuit-node-symbol"
-        style={{ transform: `rotate(${data.rotation}deg)` }}
-      >
+      <div className="circuit-node-label">
+        {data.label}
+      </div>
+      <div className="circuit-node-symbol">
         {symbol}
       </div>
       {data.parameterText ? (
-        <div className="circuit-node-parameter">{data.parameterText}</div>
+        <div className="circuit-node-parameter">
+          {data.parameterText}
+        </div>
       ) : null}
     </div>
   )
