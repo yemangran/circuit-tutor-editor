@@ -587,6 +587,67 @@ textarea:focus-visible {
   color: #b91c1c;
 }
 
+.branch-current-callout {
+  position: absolute;
+  display: inline-grid;
+  gap: 4px;
+  justify-items: center;
+  min-width: 56px;
+  padding: 0;
+  color: var(--text-strong);
+  font-size: 11px;
+  font-weight: 800;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.branch-current-indicator {
+  position: relative;
+  width: 54px;
+  height: 16px;
+  display: block;
+}
+
+.branch-current-indicator-line {
+  position: absolute;
+  top: 50%;
+  left: 6px;
+  width: 42px;
+  height: 0;
+  border-top: 2px solid var(--accent);
+  opacity: 0.96;
+  transform: translateY(-50%);
+}
+
+.branch-current-indicator-arrow {
+  position: absolute;
+  top: 50%;
+  right: 2px;
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 8px solid var(--accent);
+  transform: translateY(-50%);
+  transform-origin: center;
+}
+
+.branch-current-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+}
+
+.branch-current-text {
+  color: var(--text-strong);
+  letter-spacing: 0.01em;
+}
+
+.branch-current-value {
+  color: var(--text-muted);
+}
+
 .react-flow__renderer,
 .react-flow__container {
   background: transparent;

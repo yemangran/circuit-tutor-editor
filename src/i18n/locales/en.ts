@@ -87,6 +87,8 @@ const en = {
       rotate: 'Rotate 90°',
       duplicate: 'Duplicate',
       delete: 'Delete',
+      addBranchCurrent: 'Add branch current',
+      removeBranchCurrent: 'Remove branch current',
     },
     canvas: {
       kicker: 'Canvas',
@@ -94,6 +96,7 @@ const en = {
       subtitle: 'Drag devices, wire pins, and keep spatial relationships clear for teaching.',
       count: '{{count}} devices placed',
       selected: 'Inspecting {{id}}',
+      selectedWire: 'Inspecting branch {{id}}',
       noneSelected: 'Tap a device to inspect it',
       emptyTitle: 'Start on the left',
       emptyBody:
@@ -166,6 +169,17 @@ const en = {
       branch: 'Branch',
       remove: 'Remove Control Relation',
       empty: 'Choose a mode to create the control relation for this controlled source.',
+    },
+    branchCurrent: {
+      title: 'Branch Current',
+      subtitle: 'Semantic current settings for {{id}}.',
+      create: 'Add branch current',
+      label: 'Current label',
+      direction: 'Current direction',
+      directionHint: 'Current is defined from {{from}} to {{to}}.',
+      reverse: 'Reverse direction',
+      remove: 'Remove branch current',
+      unknown: 'Unknown current value',
     },
     export: {
       title: 'Export',

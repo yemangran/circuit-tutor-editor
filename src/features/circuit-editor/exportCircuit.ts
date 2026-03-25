@@ -1,5 +1,6 @@
 import type {
   Annotation,
+  BranchCurrentAnnotation,
   CircuitDocument,
   ControlRelation,
   ParameterValue,
@@ -35,12 +36,21 @@ export type ExportedNode = {
 }
 
 export type ExportedAnnotation = {
-  type: Annotation['type']
+  type: Exclude<Annotation['type'], 'branch_current'>
   label: string
   fromNode?: string
   toNode?: string
   positiveNode?: string
   negativeNode?: string
+}
+
+export type ExportedBranchCurrent = {
+  id: string
+  label: string
+  fromNode: string
+  toNode: string
+  value?: ParameterValue
+  targetWireIds: string[]
 }
 
 export type ExportedControlRelation = {
@@ -54,6 +64,7 @@ export type ExportCircuitPayload = {
   components: ExportedComponent[]
   nodes: ExportedNode[]
   annotations: ExportedAnnotation[]
+  branchCurrents: ExportedBranchCurrent[]
   controlRelations: ExportedControlRelation[]
   solveTargets: SolveTarget[]
   meta: {
@@ -73,7 +84,9 @@ function mapAnnotations(
   annotations: Annotation[],
   pinToNode: Record<string, string>,
 ): ExportedAnnotation[] {
-  return annotations.map((annotation) => {
+  return annotations
+    .filter((annotation) => annotation.type !== 'branch_current')
+    .map((annotation) => {
     if (annotation.type === 'current_arrow') {
       return {
         type: annotation.type,
@@ -101,7 +114,28 @@ function mapAnnotations(
           ]
         : undefined,
     }
-  })
+    })
+}
+
+function mapBranchCurrents(
+  annotations: Annotation[],
+  pinToNode: Record<string, string>,
+): ExportedBranchCurrent[] {
+  return annotations
+    .filter(
+      (annotation): annotation is BranchCurrentAnnotation =>
+        annotation.type === 'branch_current',
+    )
+    .map((annotation) => ({
+      id: annotation.id,
+      label: annotation.label,
+      fromNode:
+        pinToNode[`${annotation.fromPinRef.componentId}:${annotation.fromPinRef.pinId}`],
+      toNode:
+        pinToNode[`${annotation.toPinRef.componentId}:${annotation.toPinRef.pinId}`],
+      ...(annotation.value ? { value: annotation.value } : {}),
+      targetWireIds: annotation.targetWireIds,
+    }))
 }
 
 function mapControlRelations(
@@ -146,6 +180,7 @@ export function exportCircuit(doc: CircuitDocument): ExportCircuitResult {
       kind: node.kind,
     })),
     annotations: mapAnnotations(doc.annotations, resolved.pinToNode),
+    branchCurrents: mapBranchCurrents(doc.annotations, resolved.pinToNode),
     controlRelations: mapControlRelations(doc.controlRelations),
     solveTargets: doc.solveTargets,
     meta: {

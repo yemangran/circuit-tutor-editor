@@ -5,12 +5,12 @@ import ReactFlow, {
   BackgroundVariant,
   ConnectionMode,
   Controls,
-  MarkerType,
   useReactFlow,
   type Connection,
   type Edge,
   type Node,
   type NodeDragHandler,
+  type EdgeMouseHandler,
   type NodeMouseHandler,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
@@ -31,10 +31,15 @@ import {
   VoltageSourceNode,
 } from '../nodes'
 import { useCircuitStore } from '../../store/circuitStore'
-import type { CircuitComponent, CircuitWire } from '../../types/circuit'
+import type {
+  BranchCurrentAnnotation,
+  CircuitComponent,
+  CircuitWire,
+} from '../../types/circuit'
 import type { ComponentKind } from '../../types/circuit'
 import type { CircuitFlowNodeData } from '../nodes'
 import i18n from '../../../../i18n'
+import { BranchWireEdge } from './BranchWireEdge'
 
 const nodeTypes = {
   resistor: ResistorNode,
@@ -50,6 +55,10 @@ const nodeTypes = {
   switch_spdt: SwitchSPDTNode,
   junction: JunctionNode,
   ground: GroundNode,
+}
+
+const edgeTypes = {
+  branchWire: BranchWireEdge,
 }
 
 const CANVAS_GRID_SIZE: [number, number] = [20, 20]
@@ -109,24 +118,58 @@ function toFlowNode(component: CircuitComponent): Node<CircuitFlowNodeData> {
   }
 }
 
-function toFlowEdge(wire: CircuitWire): Edge {
+function formatBranchCurrentValue(
+  annotation: BranchCurrentAnnotation | undefined,
+): string | undefined {
+  if (!annotation?.value) {
+    return undefined
+  }
+
+  if (annotation.value.isUnknown) {
+    return '?'
+  }
+
+  if (annotation.value.magnitude != null) {
+    return annotation.value.unit
+      ? `${annotation.value.magnitude} ${annotation.value.unit}`
+      : `${annotation.value.magnitude}`
+  }
+
+  return annotation.value.unit
+}
+
+function isSameEndpoint(
+  left: { componentId: string; pinId: string },
+  right: { componentId: string; pinId: string },
+) {
+  return left.componentId === right.componentId && left.pinId === right.pinId
+}
+
+function toFlowEdge(
+  wire: CircuitWire,
+  branchCurrent: BranchCurrentAnnotation | undefined,
+  isSelected: boolean,
+): Edge {
+  const directionMatchesWire =
+    branchCurrent &&
+    isSameEndpoint(branchCurrent.fromPinRef, wire.from) &&
+    isSameEndpoint(branchCurrent.toPinRef, wire.to)
+
   return {
     id: wire.id,
     source: wire.from.componentId,
     sourceHandle: wire.from.pinId,
     target: wire.to.componentId,
     targetHandle: wire.to.pinId,
-    type: 'smoothstep',
+    type: 'branchWire',
     animated: false,
-    style: {
-      stroke: '#2563eb',
-      strokeWidth: 2.5,
-    },
-    markerEnd: {
-      type: MarkerType.ArrowClosed,
-      width: 18,
-      height: 18,
-      color: '#2563eb',
+    selected: isSelected,
+    data: {
+      currentLabel: branchCurrent?.label,
+      currentValueText: formatBranchCurrentValue(branchCurrent),
+      hasBranchCurrent: Boolean(branchCurrent),
+      isSelected,
+      directionReversed: branchCurrent ? !directionMatchesWire : undefined,
     },
   }
 }
@@ -145,31 +188,62 @@ function isValidConnection(connection: Connection): connection is Required<
 export default function CircuitCanvas() {
   const { screenToFlowPosition } = useReactFlow()
   const stageRef = useRef<HTMLDivElement>(null)
-  const [contextMenu, setContextMenu] = useState<{
-    componentId: string
-    top: number
-    left: number
-  } | null>(null)
+  const [contextMenu, setContextMenu] = useState<
+    | {
+        kind: 'component'
+        componentId: string
+        top: number
+        left: number
+      }
+    | {
+        kind: 'wire'
+        wireId: string
+        top: number
+        left: number
+      }
+    | null
+  >(null)
   const components = useCircuitStore((state) => state.doc.components)
   const wires = useCircuitStore((state) => state.doc.wires)
+  const annotations = useCircuitStore((state) => state.doc.annotations)
   const addComponent = useCircuitStore((state) => state.addComponent)
   const addWire = useCircuitStore((state) => state.addWire)
   const clearCanvas = useCircuitStore((state) => state.clearCanvas)
   const deleteComponent = useCircuitStore((state) => state.deleteComponent)
   const duplicateComponent = useCircuitStore((state) => state.duplicateComponent)
   const selectedComponentId = useCircuitStore((state) => state.selectedComponentId)
+  const selectedWireId = useCircuitStore((state) => state.selectedWireId)
   const selectComponent = useCircuitStore((state) => state.selectComponent)
+  const selectWire = useCircuitStore((state) => state.selectWire)
   const updateComponentPosition = useCircuitStore(
     (state) => state.updateComponentPosition,
   )
   const updateComponentRotation = useCircuitStore(
     (state) => state.updateComponentRotation,
   )
+  const upsertBranchCurrentAnnotation = useCircuitStore(
+    (state) => state.upsertBranchCurrentAnnotation,
+  )
+  const removeBranchCurrentAnnotation = useCircuitStore(
+    (state) => state.removeBranchCurrentAnnotation,
+  )
   const nodes = components.map((component) => ({
     ...toFlowNode(component),
     selected: component.id === selectedComponentId,
   }))
-  const edges = wires.map(toFlowEdge)
+  const branchCurrentMap = new Map(
+    annotations
+      .filter(
+        (annotation): annotation is BranchCurrentAnnotation =>
+          annotation.type === 'branch_current',
+      )
+      .flatMap((annotation) =>
+        annotation.targetWireIds.map((wireId) => [wireId, annotation] as const),
+      ),
+  )
+  const edges = wires.map((wire) =>
+    toFlowEdge(wire, branchCurrentMap.get(wire.id), wire.id === selectedWireId),
+  )
 
   function snapToCanvasGrid(position: { x: number; y: number }) {
     return {
@@ -244,6 +318,29 @@ export default function CircuitCanvas() {
     selectComponent(node.id)
   }
 
+  const handleEdgeClick: EdgeMouseHandler = (_, edge) => {
+    setContextMenu(null)
+    selectWire(edge.id)
+  }
+
+  const handleEdgeContextMenu: EdgeMouseHandler = (event, edge) => {
+    event.preventDefault()
+
+    const stageBounds = stageRef.current?.getBoundingClientRect()
+
+    if (!stageBounds) {
+      return
+    }
+
+    setContextMenu({
+      kind: 'wire',
+      wireId: edge.id,
+      left: Math.min(event.clientX - stageBounds.left, stageBounds.width - 192),
+      top: Math.min(event.clientY - stageBounds.top, stageBounds.height - 112),
+    })
+    selectWire(edge.id)
+  }
+
   const handleNodeContextMenu: NodeMouseHandler = (event, node) => {
     event.preventDefault()
 
@@ -254,6 +351,7 @@ export default function CircuitCanvas() {
     }
 
     setContextMenu({
+      kind: 'component',
       componentId: node.id,
       left: Math.min(event.clientX - stageBounds.left, stageBounds.width - 176),
       top: Math.min(event.clientY - stageBounds.top, stageBounds.height - 148),
@@ -305,7 +403,7 @@ export default function CircuitCanvas() {
   }
 
   function handleRotateSelected() {
-    if (!contextMenu) {
+    if (!contextMenu || contextMenu.kind !== 'component') {
       return
     }
 
@@ -326,7 +424,7 @@ export default function CircuitCanvas() {
   }
 
   function handleDeleteSelected() {
-    if (!contextMenu) {
+    if (!contextMenu || contextMenu.kind !== 'component') {
       return
     }
 
@@ -335,7 +433,7 @@ export default function CircuitCanvas() {
   }
 
   function handleDuplicateSelected() {
-    if (!contextMenu) {
+    if (!contextMenu || contextMenu.kind !== 'component') {
       return
     }
 
@@ -352,6 +450,24 @@ export default function CircuitCanvas() {
       x: component.position.x + CANVAS_GRID_SIZE[0] * 2,
       y: component.position.y + CANVAS_GRID_SIZE[1] * 2,
     })
+    closeContextMenu()
+  }
+
+  function handleCreateBranchCurrent() {
+    if (!contextMenu || contextMenu.kind !== 'wire') {
+      return
+    }
+
+    upsertBranchCurrentAnnotation(contextMenu.wireId)
+    closeContextMenu()
+  }
+
+  function handleRemoveBranchCurrent() {
+    if (!contextMenu || contextMenu.kind !== 'wire') {
+      return
+    }
+
+    removeBranchCurrentAnnotation(contextMenu.wireId)
     closeContextMenu()
   }
 
@@ -379,6 +495,7 @@ export default function CircuitCanvas() {
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           fitView
           connectionMode={ConnectionMode.Loose}
           onConnect={handleConnect}
@@ -387,10 +504,13 @@ export default function CircuitCanvas() {
           onNodeDrag={handleNodeDrag}
           onNodeDragStop={handleNodeDragStop}
           onNodeClick={handleNodeClick}
+          onEdgeClick={handleEdgeClick}
+          onEdgeContextMenu={handleEdgeContextMenu}
           onNodeContextMenu={handleNodeContextMenu}
           onPaneClick={() => {
             closeContextMenu()
             selectComponent(null)
+            selectWire(null)
           }}
         >
           <Background
@@ -406,28 +526,53 @@ export default function CircuitCanvas() {
             className="canvas-context-menu"
             style={{ top: contextMenu.top, left: contextMenu.left }}
           >
-            <button
-              type="button"
-              className="canvas-context-menu-item"
-              onClick={handleRotateSelected}
-            >
-              {i18n.t('editor.contextMenu.rotate')}
-            </button>
-            <button
-              type="button"
-              className="canvas-context-menu-item"
-              onClick={handleDuplicateSelected}
-            >
-              {i18n.t('editor.contextMenu.duplicate')}
-            </button>
-            <button
-              type="button"
-              className="canvas-context-menu-item"
-              data-tone="danger"
-              onClick={handleDeleteSelected}
-            >
-              {i18n.t('editor.contextMenu.delete')}
-            </button>
+            {contextMenu.kind === 'component' ? (
+              <>
+                <button
+                  type="button"
+                  className="canvas-context-menu-item"
+                  onClick={handleRotateSelected}
+                >
+                  {i18n.t('editor.contextMenu.rotate')}
+                </button>
+                <button
+                  type="button"
+                  className="canvas-context-menu-item"
+                  onClick={handleDuplicateSelected}
+                >
+                  {i18n.t('editor.contextMenu.duplicate')}
+                </button>
+                <button
+                  type="button"
+                  className="canvas-context-menu-item"
+                  data-tone="danger"
+                  onClick={handleDeleteSelected}
+                >
+                  {i18n.t('editor.contextMenu.delete')}
+                </button>
+              </>
+            ) : (
+              <>
+                {!branchCurrentMap.has(contextMenu.wireId) ? (
+                  <button
+                    type="button"
+                    className="canvas-context-menu-item"
+                    onClick={handleCreateBranchCurrent}
+                  >
+                    {i18n.t('editor.contextMenu.addBranchCurrent')}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="canvas-context-menu-item"
+                    data-tone="danger"
+                    onClick={handleRemoveBranchCurrent}
+                  >
+                    {i18n.t('editor.contextMenu.removeBranchCurrent')}
+                  </button>
+                )}
+              </>
+            )}
           </div>
         ) : null}
       </div>

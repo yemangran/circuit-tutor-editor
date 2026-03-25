@@ -11,7 +11,8 @@ export default function CircuitEditor() {
   const selectedComponentId = useCircuitStore(
     (state) => state.selectedComponentId,
   );
-  const hasSelection = Boolean(selectedComponentId);
+  const selectedWireId = useCircuitStore((state) => state.selectedWireId);
+  const hasSelection = Boolean(selectedComponentId || selectedWireId);
 
   return (
     <ReactFlowProvider>
@@ -37,7 +38,9 @@ export default function CircuitEditor() {
               <div className="mini-chip">
                 {selectedComponentId
                   ? t("editor.canvas.selected", { id: selectedComponentId })
-                  : t("editor.canvas.noneSelected")}
+                  : selectedWireId
+                    ? t("editor.canvas.selectedWire", { id: selectedWireId })
+                    : t("editor.canvas.noneSelected")}
               </div>
             </div>
           </div>

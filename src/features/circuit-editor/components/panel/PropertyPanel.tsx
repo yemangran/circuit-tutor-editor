@@ -1,6 +1,10 @@
 import { resolveNodes } from "../../resolveNodes";
 import { useCircuitStore } from "../../store/circuitStore";
-import type { ControlRelation, ParameterValue } from "../../types/circuit";
+import type {
+  BranchCurrentAnnotation,
+  ControlRelation,
+  ParameterValue,
+} from "../../types/circuit";
 import { makePinKey } from "../../unionFind";
 import { useTranslation } from "react-i18next";
 
@@ -28,6 +32,7 @@ export function PropertyPanel() {
   const selectedComponentId = useCircuitStore(
     (state) => state.selectedComponentId,
   );
+  const selectedWireId = useCircuitStore((state) => state.selectedWireId);
   const updateComponentLabel = useCircuitStore(
     (state) => state.updateComponentLabel,
   );
@@ -41,6 +46,12 @@ export function PropertyPanel() {
     (state) => state.updateComponentState,
   );
   const addComponentPin = useCircuitStore((state) => state.addComponentPin);
+  const upsertBranchCurrentAnnotation = useCircuitStore(
+    (state) => state.upsertBranchCurrentAnnotation,
+  );
+  const removeBranchCurrentAnnotation = useCircuitStore(
+    (state) => state.removeBranchCurrentAnnotation,
+  );
   const setNamedNode = useCircuitStore((state) => state.setNamedNode);
   const removeNamedNode = useCircuitStore((state) => state.removeNamedNode);
   const upsertControlRelation = useCircuitStore(
@@ -53,6 +64,12 @@ export function PropertyPanel() {
   const selectedComponent = doc.components.find(
     (component) => component.id === selectedComponentId,
   );
+  const selectedWire = doc.wires.find((wire) => wire.id === selectedWireId);
+  const selectedBranchCurrent = doc.annotations.find(
+    (annotation): annotation is BranchCurrentAnnotation =>
+      annotation.type === "branch_current" &&
+      annotation.targetWireIds.includes(selectedWireId ?? ""),
+  );
 
   const resolved = resolveNodes({
     components: doc.components,
@@ -60,7 +77,7 @@ export function PropertyPanel() {
     namedNodes: doc.namedNodes,
   });
 
-  if (!selectedComponent) {
+  if (!selectedComponent && !selectedWire) {
     return (
       <aside className="studio-card">
         <div className="panel-header">
@@ -73,6 +90,189 @@ export function PropertyPanel() {
         </div>
       </aside>
     );
+  }
+
+  if (selectedWire) {
+    const sectionIdBase = selectedWire.id;
+    const fromNode = resolved.pinToNode[
+      makePinKey(selectedWire.from.componentId, selectedWire.from.pinId)
+    ];
+    const toNode = resolved.pinToNode[
+      makePinKey(selectedWire.to.componentId, selectedWire.to.pinId)
+    ];
+    const branchCurrent = selectedBranchCurrent;
+
+    return (
+      <aside
+        className="studio-card inspector-panel"
+        style={{ overflowY: "auto" }}
+      >
+        <div className="panel-header">
+          <h2 className="panel-title">{t("panel.branchCurrent.title")}</h2>
+          <p className="panel-subtitle">
+            {t("panel.branchCurrent.subtitle", { id: selectedWire.id })}
+          </p>
+        </div>
+
+        <div className="panel-stack">
+          <section className="panel-section">
+            <div className="section-stack">
+              <div className="pill-card">
+                <div className="field-label">
+                  {t("panel.branchCurrent.direction")}
+                </div>
+                <p className="support-text">
+                  {t("panel.branchCurrent.directionHint", {
+                    from: branchCurrent ? resolved.pinToNode[
+                      makePinKey(
+                        branchCurrent.fromPinRef.componentId,
+                        branchCurrent.fromPinRef.pinId,
+                      )
+                    ] : fromNode,
+                    to: branchCurrent ? resolved.pinToNode[
+                      makePinKey(
+                        branchCurrent.toPinRef.componentId,
+                        branchCurrent.toPinRef.pinId,
+                      )
+                    ] : toNode,
+                  })}
+                </p>
+              </div>
+
+              {!branchCurrent ? (
+                <button
+                  type="button"
+                  className="panel-action"
+                  data-tone="secondary"
+                  onClick={() => upsertBranchCurrentAnnotation(selectedWire.id)}
+                >
+                  {t("panel.branchCurrent.create")}
+                </button>
+              ) : (
+                <>
+                  <div className="field-stack">
+                    <label
+                      className="field-label"
+                      htmlFor={`${sectionIdBase}-branch-current-label`}
+                    >
+                      {t("panel.branchCurrent.label")}
+                    </label>
+                    <input
+                      id={`${sectionIdBase}-branch-current-label`}
+                      className="text-input"
+                      value={branchCurrent.label}
+                      onChange={(event) =>
+                        upsertBranchCurrentAnnotation(selectedWire.id, {
+                          label: event.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="panel-actions-row">
+                    <button
+                      type="button"
+                      className="panel-action"
+                      data-tone="secondary"
+                      onClick={() =>
+                        upsertBranchCurrentAnnotation(selectedWire.id, {
+                          fromPinRef: branchCurrent.toPinRef,
+                          toPinRef: branchCurrent.fromPinRef,
+                        })
+                      }
+                    >
+                      {t("panel.branchCurrent.reverse")}
+                    </button>
+                    <button
+                      type="button"
+                      className="panel-action"
+                      onClick={() =>
+                        removeBranchCurrentAnnotation(selectedWire.id)
+                      }
+                    >
+                      {t("panel.branchCurrent.remove")}
+                    </button>
+                  </div>
+
+                  <div className="field-row">
+                    <div className="field-stack">
+                      <label
+                        className="field-label"
+                        htmlFor={`${sectionIdBase}-branch-current-magnitude`}
+                      >
+                        {t("panel.fields.magnitude")}
+                      </label>
+                      <input
+                        id={`${sectionIdBase}-branch-current-magnitude`}
+                        className="text-input"
+                        type="number"
+                        value={
+                          branchCurrent.value?.magnitude == null
+                            ? ""
+                            : `${branchCurrent.value.magnitude}`
+                        }
+                        onChange={(event) =>
+                          upsertBranchCurrentAnnotation(selectedWire.id, {
+                            value: {
+                              ...branchCurrent.value,
+                              magnitude:
+                                event.target.value === ""
+                                  ? null
+                                  : Number(event.target.value),
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="field-stack">
+                      <label
+                        className="field-label"
+                        htmlFor={`${sectionIdBase}-branch-current-unit`}
+                      >
+                        {t("panel.fields.unit")}
+                      </label>
+                      <input
+                        id={`${sectionIdBase}-branch-current-unit`}
+                        className="text-input"
+                        value={branchCurrent.value?.unit ?? "A"}
+                        onChange={(event) =>
+                          upsertBranchCurrentAnnotation(selectedWire.id, {
+                            value: {
+                              ...branchCurrent.value,
+                              unit: event.target.value,
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <label className="checkbox-row">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(branchCurrent.value?.isUnknown)}
+                      onChange={(event) =>
+                        upsertBranchCurrentAnnotation(selectedWire.id, {
+                          value: {
+                            ...branchCurrent.value,
+                            isUnknown: event.target.checked,
+                          },
+                        })
+                      }
+                    />
+                    {t("panel.branchCurrent.unknown")}
+                  </label>
+                </>
+              )}
+            </div>
+          </section>
+        </div>
+      </aside>
+    );
+  }
+
+  if (!selectedComponent) {
+    return null;
   }
 
   const namedNodeMap = Object.fromEntries(

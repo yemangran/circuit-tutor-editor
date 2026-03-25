@@ -52,16 +52,38 @@ export type NamedNode = {
   position: { x: number; y: number }
 }
 
-export type Annotation = {
+export type CurrentArrowAnnotation = {
   id: string
-  type: 'current_arrow' | 'voltage_polarity'
+  type: 'current_arrow'
   label: string
   targetComponentId?: string
   fromPinRef?: WireEndpoint
   toPinRef?: WireEndpoint
+}
+
+export type VoltagePolarityAnnotation = {
+  id: string
+  type: 'voltage_polarity'
+  label: string
+  targetComponentId?: string
   positivePinRef?: WireEndpoint
   negativePinRef?: WireEndpoint
 }
+
+export type BranchCurrentAnnotation = {
+  id: string
+  type: 'branch_current'
+  label: string
+  fromPinRef: WireEndpoint
+  toPinRef: WireEndpoint
+  value?: ParameterValue
+  targetWireIds: string[]
+}
+
+export type Annotation =
+  | CurrentArrowAnnotation
+  | VoltagePolarityAnnotation
+  | BranchCurrentAnnotation
 
 export type ControlRelation = {
   id: string

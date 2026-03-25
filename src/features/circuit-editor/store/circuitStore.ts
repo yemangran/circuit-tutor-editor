@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { componentTemplates, createComponentFromTemplate } from '../componentTemplates'
 import {
+  BranchCurrentAnnotation,
   ControlRelation,
   CircuitDocument,
   CircuitComponent,
@@ -70,7 +71,9 @@ function getNextComponentLabel(
 export const useCircuitStore = create<{
   doc: CircuitDocument
   selectedComponentId: string | null
+  selectedWireId: string | null
   selectComponent: (componentId: string | null) => void
+  selectWire: (wireId: string | null) => void
   addComponent: (
     kind: ComponentKind,
     position?: { x: number; y: number },
@@ -98,6 +101,11 @@ export const useCircuitStore = create<{
   ) => void
   updateComponentState: (componentId: string, state: string) => void
   addComponentPin: (componentId: string) => void
+  upsertBranchCurrentAnnotation: (
+    wireId: string,
+    patch?: Partial<Omit<BranchCurrentAnnotation, 'id' | 'type' | 'targetWireIds'>>,
+  ) => void
+  removeBranchCurrentAnnotation: (wireId: string) => void
   setNamedNode: (pinKey: string, label: string) => void
   removeNamedNode: (pinKey: string) => void
   upsertControlRelation: (
@@ -108,7 +116,10 @@ export const useCircuitStore = create<{
 }>((set) => ({
   doc: createInitialDoc(),
   selectedComponentId: null,
-  selectComponent: (componentId) => set({ selectedComponentId: componentId }),
+  selectedWireId: null,
+  selectComponent: (componentId) =>
+    set({ selectedComponentId: componentId, selectedWireId: null }),
+  selectWire: (wireId) => set({ selectedWireId: wireId, selectedComponentId: null }),
   addComponent: (kind, position) =>
     set((state) => {
       let resolvedPosition =
@@ -148,35 +159,61 @@ export const useCircuitStore = create<{
       }
     }),
   deleteComponent: (componentId) =>
-    set((state) => ({
-      doc: {
-        ...state.doc,
-        components: state.doc.components.filter((component) => component.id !== componentId),
-        wires: state.doc.wires.filter(
-          (wire) =>
-            wire.from.componentId !== componentId && wire.to.componentId !== componentId,
-        ),
-        namedNodes: state.doc.namedNodes.filter(
-          (node) => !node.id.startsWith(`${componentId}:`),
-        ),
-        controlRelations: state.doc.controlRelations.filter(
-          (relation) => relation.targetComponentId !== componentId,
-        ),
-        annotations: state.doc.annotations.filter(
-          (annotation) =>
-            annotation.targetComponentId !== componentId &&
-            annotation.fromPinRef?.componentId !== componentId &&
-            annotation.toPinRef?.componentId !== componentId &&
-            annotation.positivePinRef?.componentId !== componentId &&
-            annotation.negativePinRef?.componentId !== componentId,
-        ),
-        solveTargets: state.doc.solveTargets.filter(
-          (target) => target.componentId !== componentId,
-        ),
-      },
-      selectedComponentId:
-        state.selectedComponentId === componentId ? null : state.selectedComponentId,
-    })),
+    set((state) => {
+      const removedWireIds = new Set(
+        state.doc.wires
+          .filter(
+            (wire) =>
+              wire.from.componentId === componentId || wire.to.componentId === componentId,
+          )
+          .map((wire) => wire.id),
+      )
+
+      return {
+        doc: {
+          ...state.doc,
+          components: state.doc.components.filter((component) => component.id !== componentId),
+          wires: state.doc.wires.filter((wire) => !removedWireIds.has(wire.id)),
+          namedNodes: state.doc.namedNodes.filter(
+            (node) => !node.id.startsWith(`${componentId}:`),
+          ),
+          controlRelations: state.doc.controlRelations.filter(
+            (relation) => relation.targetComponentId !== componentId,
+          ),
+          annotations: state.doc.annotations.filter(
+            (annotation) =>
+              !(
+                annotation.type === 'branch_current' &&
+                annotation.targetWireIds.some((wireId) => removedWireIds.has(wireId))
+              ) &&
+              ('targetComponentId' in annotation
+                ? annotation.targetComponentId !== componentId
+                : true) &&
+              ('fromPinRef' in annotation
+                ? annotation.fromPinRef?.componentId !== componentId
+                : true) &&
+              ('toPinRef' in annotation
+                ? annotation.toPinRef?.componentId !== componentId
+                : true) &&
+              ('positivePinRef' in annotation
+                ? annotation.positivePinRef?.componentId !== componentId
+                : true) &&
+              ('negativePinRef' in annotation
+                ? annotation.negativePinRef?.componentId !== componentId
+                : true),
+          ),
+          solveTargets: state.doc.solveTargets.filter(
+            (target) => target.componentId !== componentId,
+          ),
+        },
+        selectedComponentId:
+          state.selectedComponentId === componentId ? null : state.selectedComponentId,
+        selectedWireId:
+          state.selectedWireId && removedWireIds.has(state.selectedWireId)
+            ? null
+            : state.selectedWireId,
+      }
+    }),
   duplicateComponent: (componentId, position) =>
     set((state) => {
       const sourceComponent = state.doc.components.find(
@@ -236,6 +273,7 @@ export const useCircuitStore = create<{
           ],
         },
         selectedComponentId: nextLabel,
+        selectedWireId: null,
       }
     }),
   updateComponentPosition: (componentId, position) =>
@@ -346,6 +384,52 @@ export const useCircuitStore = create<{
         },
       }
     }),
+  upsertBranchCurrentAnnotation: (wireId, patch) =>
+    set((state) => {
+      const wire = state.doc.wires.find((item) => item.id === wireId)
+
+      if (!wire) {
+        return state
+      }
+
+      const existing = state.doc.annotations.find(
+        (annotation): annotation is BranchCurrentAnnotation =>
+          annotation.type === 'branch_current' && annotation.targetWireIds.includes(wireId),
+      )
+
+      const nextAnnotation: BranchCurrentAnnotation = {
+        id: existing?.id ?? `BC${state.doc.annotations.length + 1}`,
+        type: 'branch_current',
+        label: existing?.label ?? wireId.replace(/^W/, 'I'),
+        fromPinRef: existing?.fromPinRef ?? wire.from,
+        toPinRef: existing?.toPinRef ?? wire.to,
+        value: existing?.value,
+        targetWireIds: [wireId],
+        ...patch,
+      }
+
+      return {
+        doc: {
+          ...state.doc,
+          annotations: existing
+            ? state.doc.annotations.map((annotation) =>
+                annotation.id === existing.id ? nextAnnotation : annotation,
+              )
+            : [...state.doc.annotations, nextAnnotation],
+        },
+      }
+    }),
+  removeBranchCurrentAnnotation: (wireId) =>
+    set((state) => ({
+      doc: {
+        ...state.doc,
+        annotations: state.doc.annotations.filter(
+          (annotation) =>
+            annotation.type !== 'branch_current' ||
+            !annotation.targetWireIds.includes(wireId),
+        ),
+      },
+    })),
   setNamedNode: (pinKey, label) =>
     set((state) => {
       const componentId = pinKey.split(':')[0]
@@ -455,11 +539,13 @@ export const useCircuitStore = create<{
           ...state.doc,
           wires: [...state.doc.wires, wire],
         },
+        selectedWireId: wire.id,
       }
     }),
   clearCanvas: () =>
     set({
       doc: createInitialDoc(),
       selectedComponentId: null,
+      selectedWireId: null,
     }),
 }))
