@@ -38,7 +38,7 @@ const zhCN = {
       step3Body: '在复制 JSON 前先看诊断信息，避免把不完整拓扑交给求解器。',
     },
     workspace: {
-      title: '教学电路工作台',
+      title: '苏大电路分析编辑器',
       description: '响应式三栏编辑器，包含引导式元件面板、结构化属性表单和更适合展示的画布。',
       mode: 'Workbench 模式',
       focus: '已加强可访问性',
@@ -163,6 +163,8 @@ const zhCN = {
       subtitle: '生成结构化 payload，并在复制前检查诊断信息。',
       exportJson: '导出 JSON',
       copyJson: '复制 JSON',
+      exportSuccess: 'JSON 已导出并复制到剪贴板。',
+      exportError: 'JSON 已生成，但复制到剪贴板失败。',
       previewTitle: 'Payload 预览',
       previewEmpty: '点击“导出 JSON”后可预览结构化结果。',
       copySuccess: '已将导出 payload JSON 复制到剪贴板。',

@@ -172,6 +172,8 @@ const en = {
       subtitle: 'Generate a structured payload and review diagnostics before copying.',
       exportJson: 'Export JSON',
       copyJson: 'Copy JSON',
+      exportSuccess: 'JSON exported and copied to clipboard.',
+      exportError: 'JSON was generated, but copying to clipboard failed.',
       previewTitle: 'Payload preview',
       previewEmpty: 'Click Export JSON to preview the structured payload.',
       copySuccess: 'Copied payload JSON to clipboard.',

@@ -111,8 +111,29 @@ export const useCircuitStore = create<{
   selectComponent: (componentId) => set({ selectedComponentId: componentId }),
   addComponent: (kind, position) =>
     set((state) => {
-      const resolvedPosition =
+      let resolvedPosition =
         position ?? getDefaultComponentPosition(state.doc.components.length)
+
+      // Junction components snap to grid intersections (center point)
+      if (kind === 'junction') {
+        const gridSize = 20
+        const junctionHalfSize = 14 // 28x28 节点的一半
+
+        // 计算中心点
+        const centerX = resolvedPosition.x + junctionHalfSize
+        const centerY = resolvedPosition.y + junctionHalfSize
+
+        // 将中心点吸附到网格交点
+        const snappedCenterX = Math.round(centerX / gridSize) * gridSize
+        const snappedCenterY = Math.round(centerY / gridSize) * gridSize
+
+        // 计算新的 position（左上角坐标）
+        resolvedPosition = {
+          x: snappedCenterX - junctionHalfSize,
+          y: snappedCenterY - junctionHalfSize,
+        }
+      }
+
       const component = createComponentFromTemplate(
         kind,
         resolvedPosition,
@@ -167,9 +188,29 @@ export const useCircuitStore = create<{
       }
 
       const nextLabel = getNextComponentLabel(state.doc.components, sourceComponent.kind)
-      const nextPosition = position ?? {
+      let nextPosition = position ?? {
         x: sourceComponent.position.x + 40,
         y: sourceComponent.position.y + 40,
+      }
+
+      // Junction components snap to grid intersections (center point)
+      if (sourceComponent.kind === 'junction') {
+        const gridSize = 20
+        const junctionHalfSize = 14 // 28x28 节点的一半
+
+        // 计算中心点
+        const centerX = nextPosition.x + junctionHalfSize
+        const centerY = nextPosition.y + junctionHalfSize
+
+        // 将中心点吸附到网格交点
+        const snappedCenterX = Math.round(centerX / gridSize) * gridSize
+        const snappedCenterY = Math.round(centerY / gridSize) * gridSize
+
+        // 计算新的 position（左上角坐标）
+        nextPosition = {
+          x: snappedCenterX - junctionHalfSize,
+          y: snappedCenterY - junctionHalfSize,
+        }
       }
 
       return {

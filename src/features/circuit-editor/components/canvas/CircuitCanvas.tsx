@@ -207,7 +207,32 @@ export default function CircuitCanvas() {
   }
 
   const handleNodeDragStop: NodeDragHandler = (_, node) => {
-    updateComponentPosition(node.id, node.position)
+    const component = components.find((c) => c.id === node.id)
+
+    let snappedPosition
+    if (component?.kind === 'junction') {
+      // Junction 节点尺寸是 28x28，让中心点吸附到网格交点
+      const JUNCTION_HALF_SIZE = 14
+
+      // 计算中心点
+      const centerX = node.position.x + JUNCTION_HALF_SIZE
+      const centerY = node.position.y + JUNCTION_HALF_SIZE
+
+      // 将中心点吸附到网格交点
+      const snappedCenterX = Math.round(centerX / CANVAS_GRID_SIZE[0]) * CANVAS_GRID_SIZE[0]
+      const snappedCenterY = Math.round(centerY / CANVAS_GRID_SIZE[1]) * CANVAS_GRID_SIZE[1]
+
+      // 计算新的 position（左上角坐标）
+      snappedPosition = {
+        x: snappedCenterX - JUNCTION_HALF_SIZE,
+        y: snappedCenterY - JUNCTION_HALF_SIZE,
+      }
+    } else {
+      // 其他节点：左上角吸附到网格交点
+      snappedPosition = snapToCanvasGrid(node.position)
+    }
+
+    updateComponentPosition(node.id, snappedPosition)
   }
 
   const handleNodeDrag: NodeDragHandler = (_, node) => {
@@ -355,8 +380,6 @@ export default function CircuitCanvas() {
           edges={edges}
           nodeTypes={nodeTypes}
           fitView
-          snapToGrid
-          snapGrid={CANVAS_GRID_SIZE}
           connectionMode={ConnectionMode.Loose}
           onConnect={handleConnect}
           onDragOver={handleDragOver}

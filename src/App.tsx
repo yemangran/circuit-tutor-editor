@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import CircuitEditor from './features/circuit-editor/components/CircuitEditor'
 import { useTranslation } from 'react-i18next'
 import { useCircuitStore } from './features/circuit-editor/store/circuitStore'
@@ -12,23 +12,29 @@ export default function App() {
   const hasGround = components.some((component) => component.kind === 'ground')
   const exportState = hasGround && components.length > 0 ? 'ready' : 'draft'
   const [exportResult, setExportResult] = useState<ExportCircuitResult | null>(null)
-  const [copyStatus, setCopyStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [exportStatus, setExportStatus] = useState<'idle' | 'success' | 'error'>('idle')
 
-  function handleExport() {
-    setExportResult(exportCircuit(doc))
-    setCopyStatus('idle')
-  }
-
-  async function handleCopy() {
-    if (!exportResult) {
+  useEffect(() => {
+    if (exportStatus === 'idle') {
       return
     }
 
+    const timeoutId = window.setTimeout(() => {
+      setExportStatus('idle')
+    }, 2400)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [exportStatus])
+
+  async function handleExport() {
+    const nextExportResult = exportCircuit(doc)
+    setExportResult(nextExportResult)
+
     try {
-      await navigator.clipboard.writeText(JSON.stringify(exportResult.payload, null, 2))
-      setCopyStatus('success')
+      await navigator.clipboard.writeText(JSON.stringify(nextExportResult.payload, null, 2))
+      setExportStatus('success')
     } catch {
-      setCopyStatus('error')
+      setExportStatus('error')
     }
   }
 
@@ -64,18 +70,9 @@ export default function App() {
                 type="button"
                 className="panel-action workspace-tool"
                 data-tone="primary"
-                onClick={handleExport}
+                onClick={() => void handleExport()}
               >
                 {t('panel.export.exportJson')}
-              </button>
-              <button
-                type="button"
-                className="panel-action workspace-tool"
-                data-tone="secondary"
-                disabled={!exportResult}
-                onClick={handleCopy}
-              >
-                {t('panel.export.copyJson')}
               </button>
               <button
                 type="button"
@@ -107,14 +104,14 @@ export default function App() {
                   </div>
                 </>
               ) : null}
-              {copyStatus === 'success' ? (
+              {exportStatus === 'success' ? (
                 <div className="status-chip workspace-tool" data-tone="success">
-                  {t('panel.export.copySuccess')}
+                  {t('panel.export.exportSuccess')}
                 </div>
               ) : null}
-              {copyStatus === 'error' ? (
+              {exportStatus === 'error' ? (
                 <div className="status-chip workspace-tool" data-tone="accent">
-                  {t('panel.export.copyError')}
+                  {t('panel.export.exportError')}
                 </div>
               ) : null}
             </div>
