@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import CircuitEditor from './features/circuit-editor/components/CircuitEditor'
-import { exportAsciiDiagram } from './features/circuit-editor/exportAscii'
+import {
+  exportAsciiDebugReport,
+  exportAsciiDiagram,
+} from './features/circuit-editor/exportAscii'
 import {
   exportCircuit,
   formatExportPayloadForLLM,
@@ -20,10 +23,6 @@ export default function App() {
   const exportState = hasGround && components.length > 0 ? 'ready' : 'draft'
   const [exportResult, setExportResult] = useState<ExportCircuitResult | null>(null)
   const [exportStatus, setExportStatus] = useState<'idle' | 'success' | 'error'>('idle')
-  const [exportPreview, setExportPreview] = useState<{
-    kind: ExportKind
-    content: string
-  } | null>(null)
 
   useEffect(() => {
     if (exportStatus === 'idle') {
@@ -40,36 +39,33 @@ export default function App() {
   function buildExportContent(
     kind: ExportKind,
     nextExportResult: ExportCircuitResult,
-  ): string {
+  ): { content: string; debug?: string } {
     if (kind === 'ascii') {
-      return exportAsciiDiagram(nextExportResult.payload)
+      return {
+        content: exportAsciiDiagram(nextExportResult.payload),
+        debug: exportAsciiDebugReport(nextExportResult.payload),
+      }
     }
 
-    return formatExportPayloadForLLM(nextExportResult.payload)
+    return {
+      content: formatExportPayloadForLLM(nextExportResult.payload),
+    }
   }
 
   async function handleExport(kind: ExportKind) {
     const nextExportResult = exportCircuit(doc)
-    const content = buildExportContent(kind, nextExportResult)
+    const result = buildExportContent(kind, nextExportResult)
 
     setExportResult(nextExportResult)
-    setExportPreview({ kind, content })
 
-    try {
-      await navigator.clipboard.writeText(content)
-      setExportStatus('success')
-    } catch {
-      setExportStatus('error')
-    }
-  }
-
-  async function handleCopyPreview() {
-    if (!exportPreview) {
-      return
+    if (kind === 'ascii' && result.debug) {
+      console.groupCollapsed('[ASCII Export Debug]')
+      console.log(result.debug)
+      console.groupEnd()
     }
 
     try {
-      await navigator.clipboard.writeText(exportPreview.content)
+      await navigator.clipboard.writeText(result.content)
       setExportStatus('success')
     } catch {
       setExportStatus('error')
@@ -162,38 +158,6 @@ export default function App() {
               ) : null}
             </div>
           </div>
-          {exportPreview ? (
-            <section className="panel-section">
-              <div className="meta-row">
-                <div>
-                  <div className="field-label">
-                    {exportPreview.kind === 'ascii'
-                      ? t('panel.export.previewAscii')
-                      : t('panel.export.previewJson')}
-                  </div>
-                  <p className="support-text">
-                    {exportPreview.kind === 'ascii'
-                      ? t('panel.export.previewAsciiHint')
-                      : t('panel.export.previewJsonHint')}
-                  </p>
-                </div>
-                <div className="panel-actions-row">
-                  <button
-                    type="button"
-                    className="panel-action"
-                    onClick={() => void handleCopyPreview()}
-                  >
-                    {t('panel.export.copyCurrent')}
-                  </button>
-                </div>
-              </div>
-              <textarea
-                className="export-preview-textarea"
-                value={exportPreview.content}
-                readOnly
-              />
-            </section>
-          ) : null}
           <div className="workspace-editor">
             <CircuitEditor />
           </div>

@@ -33,6 +33,8 @@ export type ExportedComponent = {
 export type ExportedNode = {
   label: string
   kind: 'ground' | 'user_named' | 'auto_generated'
+  pinCount: number
+  isExplicitJunction: boolean
 }
 
 export type ExportedAnnotation = {
@@ -163,6 +165,7 @@ export function exportCircuit(doc: CircuitDocument): ExportCircuitResult {
     wires: doc.wires,
     namedNodes: doc.namedNodes,
   })
+  const componentById = new Map(doc.components.map((component) => [component.id, component]))
 
   const components: ExportedComponent[] = resolved.components
     .filter((resolvedComponent) => resolvedComponent.component.kind !== 'junction')
@@ -183,6 +186,11 @@ export function exportCircuit(doc: CircuitDocument): ExportCircuitResult {
     nodes: resolved.nodes.map((node) => ({
       label: node.label,
       kind: node.kind,
+      pinCount: node.pins.length,
+      isExplicitJunction: node.pins.some((pinKey) => {
+        const [componentId] = pinKey.split(':')
+        return componentById.get(componentId)?.kind === 'junction'
+      }),
     })),
     annotations: mapAnnotations(doc.annotations, resolved.pinToNode),
     branchCurrents: mapBranchCurrents(doc.annotations, resolved.pinToNode),
