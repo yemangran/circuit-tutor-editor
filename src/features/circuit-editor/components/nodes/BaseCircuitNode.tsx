@@ -19,6 +19,7 @@ export type CircuitFlowNodeKind =
   | 'generic_load'
   | 'switch_spst'
   | 'switch_spdt'
+  | 'junction'
   | 'ground'
 
 export type CircuitFlowNodeData = {

@@ -516,6 +516,10 @@ textarea:focus-visible {
   align-items: center;
 }
 
+.rotation-btn {
+  flex: 1;
+}
+
 .summary-card strong {
   display: block;
   margin-top: 6px;
@@ -680,6 +684,44 @@ textarea:focus-visible {
   line-height: 1;
   display: inline-flex;
   align-items: center;
+}
+
+.junction-node {
+  width: 28px;
+  height: 28px;
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.junction-node-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #172033;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.92);
+}
+
+.junction-node-label {
+  position: absolute;
+  top: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: max-content;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+  pointer-events: none;
+}
+
+.junction-node[data-selected='true'] .junction-node-dot {
+  box-shadow:
+    0 0 0 4px rgba(255, 255, 255, 0.96),
+    0 0 0 8px rgba(37, 99, 235, 0.16);
 }
 
 @media (max-width: 1280px) {

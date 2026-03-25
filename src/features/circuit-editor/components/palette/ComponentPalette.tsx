@@ -29,6 +29,8 @@ function getComponentHint(kind: keyof typeof componentTemplates) {
       return 'SPST'
     case 'switch_spdt':
       return 'SPDT'
+    case 'junction':
+      return 'NODE'
     case 'ground':
       return 'GND'
   }

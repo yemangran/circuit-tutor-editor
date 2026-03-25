@@ -119,6 +119,10 @@ export function resolveNodes({
   const unconnectedPins: UnconnectedPin[] = []
 
   for (const component of components) {
+    if (component.kind === 'junction') {
+      continue
+    }
+
     for (const pinId of component.pins) {
       const nodeLabel = resolved.pinToNode[makePinKey(component.id, pinId)]
 

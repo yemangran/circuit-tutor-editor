@@ -70,6 +70,7 @@ const en = {
       generic_load: 'Generic Load',
       switch_spst: 'SPST Switch',
       switch_spdt: 'SPDT Switch',
+      junction: 'Junction',
       ground: 'Ground',
     },
   },
@@ -131,6 +132,9 @@ const en = {
       unknown: 'Unknown',
       switchState: 'Switch State',
       nodeLabels: 'Node Labels',
+      addPin: 'Add pin',
+      junctionPinsHint:
+        'Junctions start with three pins. Add extra pins here when more branches meet at the same node.',
       currentNode: 'Current node: {{label}}',
       unresolved: 'Unresolved',
       nodeLabelPlaceholder: 'Set node label',

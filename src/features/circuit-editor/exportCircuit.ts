@@ -122,20 +122,22 @@ export function exportCircuit(doc: CircuitDocument): ExportCircuitResult {
     namedNodes: doc.namedNodes,
   })
 
-  const components: ExportedComponent[] = resolved.components.map((resolvedComponent) => ({
-    id: resolvedComponent.component.id,
-    kind: resolvedComponent.component.kind,
-    label: resolvedComponent.component.label,
-    nodes: resolvedComponent.nodes,
-    parameters: resolvedComponent.component.parameters,
-    ...(resolvedComponent.polarity
-      ? { polarity: resolvedComponent.polarity }
-      : {}),
-    ...(resolvedComponent.direction
-      ? { direction: resolvedComponent.direction }
-      : {}),
-    ...(resolvedComponent.state ? { state: resolvedComponent.state } : {}),
-  }))
+  const components: ExportedComponent[] = resolved.components
+    .filter((resolvedComponent) => resolvedComponent.component.kind !== 'junction')
+    .map((resolvedComponent) => ({
+      id: resolvedComponent.component.id,
+      kind: resolvedComponent.component.kind,
+      label: resolvedComponent.component.label,
+      nodes: resolvedComponent.nodes,
+      parameters: resolvedComponent.component.parameters,
+      ...(resolvedComponent.polarity
+        ? { polarity: resolvedComponent.polarity }
+        : {}),
+      ...(resolvedComponent.direction
+        ? { direction: resolvedComponent.direction }
+        : {}),
+      ...(resolvedComponent.state ? { state: resolvedComponent.state } : {}),
+    }))
 
   const payload: ExportCircuitPayload = {
     components,

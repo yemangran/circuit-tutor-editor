@@ -135,6 +135,19 @@ function getSwitchConductivePairs(component: CircuitComponent): Array<[string, s
   return []
 }
 
+function getJunctionConductivePairs(
+  component: CircuitComponent,
+): Array<[string, string]> {
+  if (component.kind !== 'junction' || component.pins.length < 2) {
+    return []
+  }
+
+  const [firstPin, ...restPins] = component.pins
+  const firstPinKey = makePinKey(component.id, firstPin)
+
+  return restPins.map((pinId) => [firstPinKey, makePinKey(component.id, pinId)])
+}
+
 function sortPins(pins: string[]): string[] {
   const sorted = [...pins]
   sorted.sort((left, right) => left.localeCompare(right))
@@ -205,6 +218,10 @@ export function resolveCircuitNodes({
 
   for (const component of components) {
     for (const [leftPin, rightPin] of getSwitchConductivePairs(component)) {
+      unionFind.union(leftPin, rightPin)
+    }
+
+    for (const [leftPin, rightPin] of getJunctionConductivePairs(component)) {
       unionFind.union(leftPin, rightPin)
     }
   }

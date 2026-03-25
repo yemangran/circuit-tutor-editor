@@ -24,6 +24,7 @@ import {
   GenericLoadNode,
   GroundNode,
   InductorNode,
+  JunctionNode,
   ResistorNode,
   SwitchSPDTNode,
   SwitchSPSTNode,
@@ -47,6 +48,7 @@ const nodeTypes = {
   generic_load: GenericLoadNode,
   switch_spst: SwitchSPSTNode,
   switch_spdt: SwitchSPDTNode,
+  junction: JunctionNode,
   ground: GroundNode,
 }
 

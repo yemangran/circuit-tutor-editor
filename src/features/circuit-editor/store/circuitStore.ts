@@ -97,6 +97,7 @@ export const useCircuitStore = create<{
     patch: Partial<ParameterValue>,
   ) => void
   updateComponentState: (componentId: string, state: string) => void
+  addComponentPin: (componentId: string) => void
   setNamedNode: (pinKey: string, label: string) => void
   removeNamedNode: (pinKey: string) => void
   upsertControlRelation: (
@@ -274,6 +275,36 @@ export const useCircuitStore = create<{
         ),
       },
     })),
+  addComponentPin: (componentId) =>
+    set((state) => {
+      const component = state.doc.components.find((item) => item.id === componentId)
+
+      if (!component || component.kind !== 'junction') {
+        return state
+      }
+
+      const nextPinId = component.pins.includes('s')
+        ? `x${component.pins.filter((pinId) => /^x\d+$/.test(pinId)).length + 1}`
+        : 's'
+
+      if (component.pins.includes(nextPinId)) {
+        return state
+      }
+
+      return {
+        doc: {
+          ...state.doc,
+          components: state.doc.components.map((item) =>
+            item.id === componentId
+              ? {
+                  ...item,
+                  pins: [...item.pins, nextPinId],
+                }
+              : item,
+          ),
+        },
+      }
+    }),
   setNamedNode: (pinKey, label) =>
     set((state) => {
       const componentId = pinKey.split(':')[0]

@@ -10,6 +10,7 @@ export type ComponentKind =
   | 'generic_load'
   | 'switch_spst'
   | 'switch_spdt'
+  | 'junction'
   | 'ground'
 
 export type PinName = string

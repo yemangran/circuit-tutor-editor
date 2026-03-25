@@ -154,6 +154,14 @@ export const componentTemplates: Record<ComponentKind, ComponentTemplate> = {
     defaultState: 'A',
     defaultRotation: 0,
   },
+  junction: {
+    kind: 'junction',
+    displayName: 'Junction',
+    labelPrefix: 'J',
+    pins: ['n', 'e', 'w'],
+    defaultParameters: {},
+    defaultRotation: 0,
+  },
   ground: {
     kind: 'ground',
     displayName: 'Ground',

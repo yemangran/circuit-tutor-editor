@@ -40,6 +40,7 @@ export function PropertyPanel() {
   const updateComponentState = useCircuitStore(
     (state) => state.updateComponentState,
   );
+  const addComponentPin = useCircuitStore((state) => state.addComponentPin);
   const setNamedNode = useCircuitStore((state) => state.setNamedNode);
   const removeNamedNode = useCircuitStore((state) => state.removeNamedNode);
   const upsertControlRelation = useCircuitStore(
@@ -133,7 +134,7 @@ export function PropertyPanel() {
               <div className="panel-actions-row">
                 <button
                   type="button"
-                  className="panel-action"
+                  className="panel-action rotation-btn"
                   data-tone="secondary"
                   onClick={() =>
                     updateComponentRotation(
@@ -147,7 +148,7 @@ export function PropertyPanel() {
                 </button>
                 <button
                   type="button"
-                  className="panel-action"
+                  className="panel-action rotation-btn"
                   data-tone="secondary"
                   onClick={() =>
                     updateComponentRotation(
@@ -159,9 +160,6 @@ export function PropertyPanel() {
                 >
                   {t("panel.fields.rotateRight")}
                 </button>
-                <div className="palette-prefix panel-rotation-value">
-                  {selectedComponent.rotation}°
-                </div>
               </div>
             </div>
           </div>
@@ -295,7 +293,22 @@ export function PropertyPanel() {
 
         <section className="panel-section">
           <div className="section-stack">
-            <h3 className="section-title">{t("panel.fields.nodeLabels")}</h3>
+            <div className="meta-row">
+              <h3 className="section-title">{t("panel.fields.nodeLabels")}</h3>
+              {selectedComponent.kind === "junction" ? (
+                <button
+                  type="button"
+                  className="panel-action"
+                  data-tone="secondary"
+                  onClick={() => addComponentPin(selectedComponent.id)}
+                >
+                  {t("panel.fields.addPin")}
+                </button>
+              ) : null}
+            </div>
+            {selectedComponent.kind === "junction" ? (
+              <p className="field-hint">{t("panel.fields.junctionPinsHint")}</p>
+            ) : null}
             {selectedComponent.pins.map((pinId) => {
               const pinKey = makePinKey(selectedComponent.id, pinId);
               const nodeLabel = resolved.pinToNode[pinKey] ?? "";
