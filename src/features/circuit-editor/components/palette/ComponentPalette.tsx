@@ -1,7 +1,7 @@
 import type { DragEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { componentTemplates } from '../../componentTemplates'
 import { useCircuitStore } from '../../store/circuitStore'
-import { useTranslation } from 'react-i18next'
 
 const PALETTE_MIME_TYPE = 'application/x-circuit-component'
 
@@ -65,7 +65,6 @@ export function ComponentPalette() {
             draggable
             onClick={() => addComponent(template.kind)}
             onDragStart={(event) => handleDragStart(event, template.kind)}
-            title={t(`palette.components.${template.kind}`)}
           >
             <div className="palette-tile-hint">{getComponentHint(template.kind)}</div>
             <div className="palette-button-title palette-tile-title">
@@ -93,6 +92,18 @@ export function ComponentPalette() {
           </svg>
           GitHub
         </a>
+        <div className="palette-contact-chip" aria-label="WeChat contact">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path d="M8.55 5C4.94 5 2 7.42 2 10.4c0 1.72 1 3.24 2.57 4.24L4 17.5l2.85-1.42c.55.1 1.12.16 1.7.16.17 0 .33-.01.5-.02A5.79 5.79 0 018.3 13.5c0-3 2.95-5.45 6.58-5.45.2 0 .4.01.59.03C14.5 6.27 11.77 5 8.55 5Zm-2.3 4.25a.9.9 0 110 1.8.9.9 0 010-1.8Zm4.6 0a.9.9 0 110 1.8.9.9 0 010-1.8ZM16.1 9c-3.26 0-5.9 2.1-5.9 4.7 0 1.48.87 2.8 2.22 3.66l-.47 2.14 2.18-1.1c.63.16 1.29.25 1.97.25 3.26 0 5.9-2.1 5.9-4.7S19.36 9 16.1 9Zm-2.07 3.8a.78.78 0 110 1.56.78.78 0 010-1.56Zm4.14 0a.78.78 0 110 1.56.78.78 0 010-1.56Z" />
+          </svg>
+          <span>tlxiaoyun</span>
+        </div>
       </div>
     </aside>
   )

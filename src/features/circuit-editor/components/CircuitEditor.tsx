@@ -1,5 +1,6 @@
 import { ReactFlowProvider } from "reactflow";
 import CircuitCanvas from "./canvas/CircuitCanvas";
+import { CanvasFoot } from "./canvas/CanvasFoot";
 import { PropertyPanel } from "./panel/PropertyPanel";
 import { ComponentPalette } from "./palette/ComponentPalette";
 import { useCircuitStore } from "../store/circuitStore";
@@ -44,7 +45,10 @@ export default function CircuitEditor() {
               </div>
             </div>
           </div>
-          <CircuitCanvas />
+          <div className="canvas-body">
+            <CircuitCanvas />
+          </div>
+          <CanvasFoot />
         </div>
         {hasSelection ? <PropertyPanel /> : null}
       </div>

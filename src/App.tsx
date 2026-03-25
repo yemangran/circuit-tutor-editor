@@ -1,8 +1,15 @@
 import { useEffect, useState } from 'react'
-import CircuitEditor from './features/circuit-editor/components/CircuitEditor'
 import { useTranslation } from 'react-i18next'
+import CircuitEditor from './features/circuit-editor/components/CircuitEditor'
+import { exportAsciiDiagram } from './features/circuit-editor/exportAscii'
+import {
+  exportCircuit,
+  formatExportPayloadForLLM,
+  type ExportCircuitResult,
+} from './features/circuit-editor/exportCircuit'
 import { useCircuitStore } from './features/circuit-editor/store/circuitStore'
-import { exportCircuit, type ExportCircuitResult } from './features/circuit-editor/exportCircuit'
+
+type ExportKind = 'json' | 'ascii'
 
 export default function App() {
   const { t, i18n } = useTranslation()
@@ -13,6 +20,10 @@ export default function App() {
   const exportState = hasGround && components.length > 0 ? 'ready' : 'draft'
   const [exportResult, setExportResult] = useState<ExportCircuitResult | null>(null)
   const [exportStatus, setExportStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [exportPreview, setExportPreview] = useState<{
+    kind: ExportKind
+    content: string
+  } | null>(null)
 
   useEffect(() => {
     if (exportStatus === 'idle') {
@@ -26,12 +37,39 @@ export default function App() {
     return () => window.clearTimeout(timeoutId)
   }, [exportStatus])
 
-  async function handleExport() {
+  function buildExportContent(
+    kind: ExportKind,
+    nextExportResult: ExportCircuitResult,
+  ): string {
+    if (kind === 'ascii') {
+      return exportAsciiDiagram(nextExportResult.payload)
+    }
+
+    return formatExportPayloadForLLM(nextExportResult.payload)
+  }
+
+  async function handleExport(kind: ExportKind) {
     const nextExportResult = exportCircuit(doc)
+    const content = buildExportContent(kind, nextExportResult)
+
     setExportResult(nextExportResult)
+    setExportPreview({ kind, content })
 
     try {
-      await navigator.clipboard.writeText(JSON.stringify(nextExportResult.payload, null, 2))
+      await navigator.clipboard.writeText(content)
+      setExportStatus('success')
+    } catch {
+      setExportStatus('error')
+    }
+  }
+
+  async function handleCopyPreview() {
+    if (!exportPreview) {
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(exportPreview.content)
       setExportStatus('success')
     } catch {
       setExportStatus('error')
@@ -70,9 +108,17 @@ export default function App() {
                 type="button"
                 className="panel-action workspace-tool"
                 data-tone="primary"
-                onClick={() => void handleExport()}
+                onClick={() => void handleExport('json')}
               >
                 {t('panel.export.exportJson')}
+              </button>
+              <button
+                type="button"
+                className="panel-action workspace-tool"
+                data-tone="secondary"
+                onClick={() => void handleExport('ascii')}
+              >
+                {t('panel.export.exportAscii')}
               </button>
               <button
                 type="button"
@@ -116,7 +162,41 @@ export default function App() {
               ) : null}
             </div>
           </div>
-          <CircuitEditor />
+          {exportPreview ? (
+            <section className="panel-section">
+              <div className="meta-row">
+                <div>
+                  <div className="field-label">
+                    {exportPreview.kind === 'ascii'
+                      ? t('panel.export.previewAscii')
+                      : t('panel.export.previewJson')}
+                  </div>
+                  <p className="support-text">
+                    {exportPreview.kind === 'ascii'
+                      ? t('panel.export.previewAsciiHint')
+                      : t('panel.export.previewJsonHint')}
+                  </p>
+                </div>
+                <div className="panel-actions-row">
+                  <button
+                    type="button"
+                    className="panel-action"
+                    onClick={() => void handleCopyPreview()}
+                  >
+                    {t('panel.export.copyCurrent')}
+                  </button>
+                </div>
+              </div>
+              <textarea
+                className="export-preview-textarea"
+                value={exportPreview.content}
+                readOnly
+              />
+            </section>
+          ) : null}
+          <div className="workspace-editor">
+            <CircuitEditor />
+          </div>
         </div>
       </section>
     </main>

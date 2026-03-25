@@ -144,6 +144,40 @@ function getJunctionHandles(pinIds: string[]): JunctionHandle[] {
   })
 }
 
+function getPinLabelStyle(handle: JunctionHandle): CSSProperties {
+  const sideOffset = 22
+
+  if (handle.position === Position.Left) {
+    return {
+      top: handle.style?.top ?? '50%',
+      left: `${-sideOffset}px`,
+      transform: 'translate(-100%, -50%)',
+    }
+  }
+
+  if (handle.position === Position.Right) {
+    return {
+      top: handle.style?.top ?? '50%',
+      right: `${-sideOffset}px`,
+      transform: 'translate(100%, -50%)',
+    }
+  }
+
+  if (handle.position === Position.Top) {
+    return {
+      top: `${-sideOffset}px`,
+      left: '50%',
+      transform: 'translate(-50%, -100%)',
+    }
+  }
+
+  return {
+    bottom: `${-sideOffset}px`,
+    left: '50%',
+    transform: 'translate(-50%, 100%)',
+  }
+}
+
 export function JunctionNode({
   id,
   data,
@@ -159,16 +193,38 @@ export function JunctionNode({
   return (
     <div className="junction-node" data-selected={selected}>
       {junctionHandles.map((handle) => (
-        <Handle
-          key={`junction-${handle.id}`}
-          id={handle.id}
-          type="source"
-          position={getRotatedPosition(handle.position, data.rotation)}
-          style={{
-            ...handleStyle,
-            ...getRotatedHandleStyle(handle.style, data.rotation),
-          }}
-        />
+        <div key={`junction-${handle.id}`}>
+          <Handle
+            id={handle.id}
+            type="source"
+            position={getRotatedPosition(handle.position, data.rotation)}
+            className={
+              data.connectedPinIds?.includes(handle.id)
+                ? 'pin-handle pin-handle-connected'
+                : 'pin-handle'
+            }
+            isConnectable={!data.connectedPinIds?.includes(handle.id)}
+            style={{
+              ...handleStyle,
+              ...getRotatedHandleStyle(handle.style, data.rotation),
+              ...(data.connectedPinIds?.includes(handle.id)
+                ? {
+                    background: '#172033',
+                    borderColor: '#172033',
+                  }
+                : {}),
+            }}
+          />
+          {data.pinNodeLabels?.[handle.id] &&
+          (selected || data.namedPinIds?.includes(handle.id)) ? (
+            <div
+              className="pin-node-label pin-node-label-junction"
+              style={getPinLabelStyle(handle)}
+            >
+              {data.pinNodeLabels[handle.id]}
+            </div>
+          ) : null}
+        </div>
       ))}
       <div className="junction-node-dot" />
       <div className="junction-node-label">{data.label}</div>

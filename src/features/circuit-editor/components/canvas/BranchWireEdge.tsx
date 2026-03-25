@@ -1,7 +1,9 @@
 import {
   BaseEdge,
   EdgeLabelRenderer,
+  Position,
   getSmoothStepPath,
+  getStraightPath,
   type EdgeProps,
 } from 'reactflow'
 
@@ -11,6 +13,8 @@ type BranchWireEdgeData = {
   isSelected?: boolean
   hasBranchCurrent?: boolean
   directionReversed?: boolean
+  sourceHandlePosition?: Position
+  targetHandlePosition?: Position
 }
 
 export function BranchWireEdge({
@@ -24,16 +28,53 @@ export function BranchWireEdge({
   markerEnd,
   data,
 }: EdgeProps<BranchWireEdgeData>) {
-  const [path, labelX, labelY] = getSmoothStepPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
-  })
   const deltaX = targetX - sourceX
   const deltaY = targetY - sourceY
+  const alignedThreshold = 8
+  const isNearlyVertical = Math.abs(deltaX) <= alignedThreshold
+  const isNearlyHorizontal = Math.abs(deltaY) <= alignedThreshold
+
+  const inferredSourcePosition =
+    data?.sourceHandlePosition ??
+    (isNearlyVertical
+      ? deltaY >= 0
+        ? Position.Bottom
+        : Position.Top
+      : isNearlyHorizontal
+        ? deltaX >= 0
+          ? Position.Right
+          : Position.Left
+        : sourcePosition)
+
+  const inferredTargetPosition =
+    data?.targetHandlePosition ??
+    (isNearlyVertical
+      ? deltaY >= 0
+        ? Position.Top
+        : Position.Bottom
+      : isNearlyHorizontal
+        ? deltaX >= 0
+          ? Position.Left
+          : Position.Right
+        : targetPosition)
+
+  const [path, labelX, labelY] =
+    isNearlyVertical || isNearlyHorizontal
+      ? getStraightPath({
+          sourceX,
+          sourceY,
+          targetX,
+          targetY,
+        })
+      : getSmoothStepPath({
+          sourceX,
+          sourceY,
+          sourcePosition: inferredSourcePosition,
+          targetX,
+          targetY,
+          targetPosition: inferredTargetPosition,
+          borderRadius: 10,
+        })
   const length = Math.max(Math.hypot(deltaX, deltaY), 1)
   const normalX = (-deltaY / length) * 22
   const normalY = (deltaX / length) * 22

@@ -61,6 +61,7 @@ export type ExportedControlRelation = {
 }
 
 export type ExportCircuitPayload = {
+  rules: string[]
   components: ExportedComponent[]
   nodes: ExportedNode[]
   annotations: ExportedAnnotation[]
@@ -80,6 +81,13 @@ export type ExportCircuitResult = {
   conflicts: NodeResolutionConflict[]
 }
 
+const EXPORT_RULES = [
+  'Same node label means those pins are electrically connected.',
+  'components[].nodes are ordered by the component pin order defined in the editor.',
+  'branchCurrents[].fromNode -> toNode defines the assumed current direction.',
+  'GND is the global reference node when present.',
+]
+
 function mapAnnotations(
   annotations: Annotation[],
   pinToNode: Record<string, string>,
@@ -87,33 +95,33 @@ function mapAnnotations(
   return annotations
     .filter((annotation) => annotation.type !== 'branch_current')
     .map((annotation) => {
-    if (annotation.type === 'current_arrow') {
+      if (annotation.type === 'current_arrow') {
+        return {
+          type: annotation.type,
+          label: annotation.label,
+          fromNode: annotation.fromPinRef
+            ? pinToNode[`${annotation.fromPinRef.componentId}:${annotation.fromPinRef.pinId}`]
+            : undefined,
+          toNode: annotation.toPinRef
+            ? pinToNode[`${annotation.toPinRef.componentId}:${annotation.toPinRef.pinId}`]
+            : undefined,
+        }
+      }
+
       return {
         type: annotation.type,
         label: annotation.label,
-        fromNode: annotation.fromPinRef
-          ? pinToNode[`${annotation.fromPinRef.componentId}:${annotation.fromPinRef.pinId}`]
+        positiveNode: annotation.positivePinRef
+          ? pinToNode[
+              `${annotation.positivePinRef.componentId}:${annotation.positivePinRef.pinId}`
+            ]
           : undefined,
-        toNode: annotation.toPinRef
-          ? pinToNode[`${annotation.toPinRef.componentId}:${annotation.toPinRef.pinId}`]
+        negativeNode: annotation.negativePinRef
+          ? pinToNode[
+              `${annotation.negativePinRef.componentId}:${annotation.negativePinRef.pinId}`
+            ]
           : undefined,
       }
-    }
-
-    return {
-      type: annotation.type,
-      label: annotation.label,
-      positiveNode: annotation.positivePinRef
-        ? pinToNode[
-            `${annotation.positivePinRef.componentId}:${annotation.positivePinRef.pinId}`
-          ]
-        : undefined,
-      negativeNode: annotation.negativePinRef
-        ? pinToNode[
-            `${annotation.negativePinRef.componentId}:${annotation.negativePinRef.pinId}`
-          ]
-        : undefined,
-    }
     })
 }
 
@@ -164,16 +172,13 @@ export function exportCircuit(doc: CircuitDocument): ExportCircuitResult {
       label: resolvedComponent.component.label,
       nodes: resolvedComponent.nodes,
       parameters: resolvedComponent.component.parameters,
-      ...(resolvedComponent.polarity
-        ? { polarity: resolvedComponent.polarity }
-        : {}),
-      ...(resolvedComponent.direction
-        ? { direction: resolvedComponent.direction }
-        : {}),
+      ...(resolvedComponent.polarity ? { polarity: resolvedComponent.polarity } : {}),
+      ...(resolvedComponent.direction ? { direction: resolvedComponent.direction } : {}),
       ...(resolvedComponent.state ? { state: resolvedComponent.state } : {}),
     }))
 
   const payload: ExportCircuitPayload = {
+    rules: EXPORT_RULES,
     components,
     nodes: resolved.nodes.map((node) => ({
       label: node.label,
@@ -195,4 +200,8 @@ export function exportCircuit(doc: CircuitDocument): ExportCircuitResult {
     diagnostics: resolved.diagnostics,
     conflicts: resolved.conflicts,
   }
+}
+
+export function formatExportPayloadForLLM(payload: ExportCircuitPayload): string {
+  return JSON.stringify(payload, null, 2)
 }

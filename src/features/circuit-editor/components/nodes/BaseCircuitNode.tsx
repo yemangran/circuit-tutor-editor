@@ -28,6 +28,9 @@ export type CircuitFlowNodeData = {
   pins: string[]
   parameterText?: string
   rotation: 0 | 90 | 180 | 270
+  connectedPinIds?: string[]
+  pinNodeLabels?: Record<string, string>
+  namedPinIds?: string[]
 }
 
 type HandleConfig = {
@@ -47,52 +50,6 @@ const handleBaseStyle: CSSProperties = {
   borderRadius: 999,
   border: '2px solid rgba(20, 35, 58, 0.4)',
   background: '#ffffff',
-}
-
-function getRotatedPosition(
-  position: Position,
-  rotation: CircuitFlowNodeData['rotation'],
-) {
-  switch (rotation) {
-    case 90:
-      if (position === Position.Left) return Position.Top
-      if (position === Position.Right) return Position.Bottom
-      if (position === Position.Top) return Position.Right
-      return Position.Left
-    case 180:
-      if (position === Position.Left) return Position.Right
-      if (position === Position.Right) return Position.Left
-      if (position === Position.Top) return Position.Bottom
-      return Position.Top
-    case 270:
-      if (position === Position.Left) return Position.Bottom
-      if (position === Position.Right) return Position.Top
-      if (position === Position.Top) return Position.Left
-      return Position.Right
-    default:
-      return position
-  }
-}
-
-function getRotatedHandleStyle(
-  style: CSSProperties | undefined,
-  rotation: CircuitFlowNodeData['rotation'],
-): CSSProperties | undefined {
-  if (!style) {
-    return undefined
-  }
-
-  if (rotation === 90 || rotation === 270) {
-    const axisValue = style.top
-
-    if (axisValue == null) {
-      return undefined
-    }
-
-    return { left: axisValue }
-  }
-
-  return style
 }
 
 function getNodeAccent(kind: CircuitFlowNodeKind) {
@@ -141,6 +98,40 @@ function getNodeAccent(kind: CircuitFlowNodeKind) {
   }
 }
 
+function getPinLabelStyle(handle: HandleConfig): CSSProperties {
+  const sideOffset = 30
+
+  if (handle.position === Position.Left) {
+    return {
+      top: handle.style?.top ?? '50%',
+      left: `${-sideOffset}px`,
+      transform: 'translate(-100%, -50%)',
+    }
+  }
+
+  if (handle.position === Position.Right) {
+    return {
+      top: handle.style?.top ?? '50%',
+      right: `${-sideOffset}px`,
+      transform: 'translate(100%, -50%)',
+    }
+  }
+
+  if (handle.position === Position.Top) {
+    return {
+      top: `${-sideOffset}px`,
+      left: handle.style?.left ?? '50%',
+      transform: 'translate(-50%, -100%)',
+    }
+  }
+
+  return {
+    bottom: `${-sideOffset}px`,
+    left: handle.style?.left ?? '50%',
+    transform: 'translate(-50%, 100%)',
+  }
+}
+
 export function BaseCircuitNode({
   id,
   data,
@@ -170,24 +161,40 @@ export function BaseCircuitNode({
         {i18n.t(`editor.nodeBadges.${accent.badgeKey}`)}
       </div>
       {handles.map((handle) => (
-        <Handle
-          key={`${data.kind}-${handle.id}`}
-          id={handle.id}
-          type="source"
-          position={handle.position}
-          style={handleBaseStyle}
-        />
-      ))}
-      <div className="circuit-node-label">
-        {data.label}
-      </div>
-      <div className="circuit-node-symbol">
-        {symbol}
-      </div>
-      {data.parameterText ? (
-        <div className="circuit-node-parameter">
-          {data.parameterText}
+        <div key={`${data.kind}-${handle.id}`}>
+          <Handle
+            id={handle.id}
+            type="source"
+            position={handle.position}
+            className={
+              data.connectedPinIds?.includes(handle.id)
+                ? 'pin-handle pin-handle-connected'
+                : 'pin-handle'
+            }
+            isConnectable={!data.connectedPinIds?.includes(handle.id)}
+            style={{
+              ...handleBaseStyle,
+              ...handle.style,
+              ...(data.connectedPinIds?.includes(handle.id)
+                ? {
+                    background: '#172033',
+                    borderColor: '#172033',
+                  }
+                : {}),
+            }}
+          />
+          {data.pinNodeLabels?.[handle.id] &&
+          (selected || data.namedPinIds?.includes(handle.id)) ? (
+            <div className="pin-node-label" style={getPinLabelStyle(handle)}>
+              {data.pinNodeLabels[handle.id]}
+            </div>
+          ) : null}
         </div>
+      ))}
+      <div className="circuit-node-label">{data.label}</div>
+      <div className="circuit-node-symbol">{symbol}</div>
+      {data.parameterText ? (
+        <div className="circuit-node-parameter">{data.parameterText}</div>
       ) : null}
     </div>
   )

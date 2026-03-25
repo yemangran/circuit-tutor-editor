@@ -5,6 +5,7 @@ import ReactFlow, {
   BackgroundVariant,
   ConnectionMode,
   Controls,
+  Position,
   useReactFlow,
   type Connection,
   type Edge,
@@ -112,6 +113,7 @@ function toFlowNode(component: CircuitComponent): Node<CircuitFlowNodeData> {
       pins: [...component.pins],
       parameterText: formatParameterText(component),
       rotation: component.rotation,
+      connectedPinIds: [],
     },
     draggable: true,
     selectable: true,
@@ -145,10 +147,77 @@ function isSameEndpoint(
   return left.componentId === right.componentId && left.pinId === right.pinId
 }
 
+function rotateHandlePosition(
+  position: Position,
+  rotation: CircuitComponent['rotation'],
+): Position {
+  switch (rotation) {
+    case 90:
+      if (position === Position.Left) return Position.Top
+      if (position === Position.Right) return Position.Bottom
+      if (position === Position.Top) return Position.Right
+      return Position.Left
+    case 180:
+      if (position === Position.Left) return Position.Right
+      if (position === Position.Right) return Position.Left
+      if (position === Position.Top) return Position.Bottom
+      return Position.Top
+    case 270:
+      if (position === Position.Left) return Position.Bottom
+      if (position === Position.Right) return Position.Top
+      if (position === Position.Top) return Position.Left
+      return Position.Right
+    default:
+      return position
+  }
+}
+
+function getBaseHandlePosition(
+  component: CircuitComponent,
+  pinId: string,
+): Position {
+  if (component.kind === 'ground') {
+    return Position.Top
+  }
+
+  if (component.kind === 'switch_spdt') {
+    if (pinId === 'common') return Position.Left
+    return Position.Right
+  }
+
+  if (component.kind === 'junction') {
+    if (pinId === 'n') return Position.Top
+    if (pinId === 's') return Position.Bottom
+    if (pinId === 'e') return Position.Right
+    if (pinId === 'w') return Position.Left
+    const extraIndex = Number(pinId.slice(1)) - 1
+    return extraIndex % 2 === 0 ? Position.Left : Position.Right
+  }
+
+  const pinIndex = component.pins.indexOf(pinId)
+  return pinIndex <= 0 ? Position.Left : Position.Right
+}
+
+function getHandlePositionHint(
+  component: CircuitComponent | undefined,
+  pinId: string,
+): Position | undefined {
+  if (!component) {
+    return undefined
+  }
+
+  return rotateHandlePosition(
+    getBaseHandlePosition(component, pinId),
+    component.rotation,
+  )
+}
+
 function toFlowEdge(
   wire: CircuitWire,
   branchCurrent: BranchCurrentAnnotation | undefined,
   isSelected: boolean,
+  sourceHandlePosition: Position | undefined,
+  targetHandlePosition: Position | undefined,
 ): Edge {
   const directionMatchesWire =
     branchCurrent &&
@@ -170,6 +239,8 @@ function toFlowEdge(
       hasBranchCurrent: Boolean(branchCurrent),
       isSelected,
       directionReversed: branchCurrent ? !directionMatchesWire : undefined,
+      sourceHandlePosition,
+      targetHandlePosition,
     },
   }
 }
@@ -208,7 +279,6 @@ export default function CircuitCanvas() {
   const annotations = useCircuitStore((state) => state.doc.annotations)
   const addComponent = useCircuitStore((state) => state.addComponent)
   const addWire = useCircuitStore((state) => state.addWire)
-  const clearCanvas = useCircuitStore((state) => state.clearCanvas)
   const deleteComponent = useCircuitStore((state) => state.deleteComponent)
   const duplicateComponent = useCircuitStore((state) => state.duplicateComponent)
   const selectedComponentId = useCircuitStore((state) => state.selectedComponentId)
@@ -227,10 +297,33 @@ export default function CircuitCanvas() {
   const removeBranchCurrentAnnotation = useCircuitStore(
     (state) => state.removeBranchCurrentAnnotation,
   )
+  const connectedPinsByComponent = new Map<string, Set<string>>()
+
+  for (const wire of wires) {
+    if (!connectedPinsByComponent.has(wire.from.componentId)) {
+      connectedPinsByComponent.set(wire.from.componentId, new Set())
+    }
+    if (!connectedPinsByComponent.has(wire.to.componentId)) {
+      connectedPinsByComponent.set(wire.to.componentId, new Set())
+    }
+
+    connectedPinsByComponent.get(wire.from.componentId)?.add(wire.from.pinId)
+    connectedPinsByComponent.get(wire.to.componentId)?.add(wire.to.pinId)
+  }
+
   const nodes = components.map((component) => ({
     ...toFlowNode(component),
+    data: {
+      ...toFlowNode(component).data,
+      connectedPinIds: Array.from(
+        connectedPinsByComponent.get(component.id) ?? [],
+      ),
+    },
     selected: component.id === selectedComponentId,
   }))
+  const componentMap = new Map(
+    components.map((component) => [component.id, component] as const),
+  )
   const branchCurrentMap = new Map(
     annotations
       .filter(
@@ -242,7 +335,13 @@ export default function CircuitCanvas() {
       ),
   )
   const edges = wires.map((wire) =>
-    toFlowEdge(wire, branchCurrentMap.get(wire.id), wire.id === selectedWireId),
+    toFlowEdge(
+      wire,
+      branchCurrentMap.get(wire.id),
+      wire.id === selectedWireId,
+      getHandlePositionHint(componentMap.get(wire.from.componentId), wire.from.pinId),
+      getHandlePositionHint(componentMap.get(wire.to.componentId), wire.to.pinId),
+    ),
   )
 
   function snapToCanvasGrid(position: { x: number; y: number }) {
@@ -359,19 +458,6 @@ export default function CircuitCanvas() {
     selectComponent(node.id)
   }
 
-  function handleClearCanvas() {
-    if (components.length === 0) {
-      return
-    }
-
-    const confirmed = window.confirm(i18n.t('editor.canvas.clearCanvasConfirm'))
-
-    if (!confirmed) {
-      return
-    }
-
-    clearCanvas()
-  }
 
   function closeContextMenu() {
     setContextMenu(null)
@@ -519,7 +605,7 @@ export default function CircuitCanvas() {
             size={1}
             color="rgba(0, 0, 0, 0.24)"
           />
-          <Controls />
+          <Controls showInteractive={false} />
         </ReactFlow>
         {contextMenu ? (
           <div
@@ -575,21 +661,6 @@ export default function CircuitCanvas() {
             )}
           </div>
         ) : null}
-      </div>
-      <div className="canvas-foot">
-        <div className="canvas-legend">
-          <div className="mini-chip">{i18n.t('editor.canvas.legend.drag')}</div>
-          <div className="mini-chip">{i18n.t('editor.canvas.legend.connect')}</div>
-          <div className="mini-chip">{i18n.t('editor.canvas.legend.inspect')}</div>
-        </div>
-        <button
-          type="button"
-          className="toolbar-button canvas-foot-action"
-          onClick={handleClearCanvas}
-          disabled={components.length === 0}
-        >
-          {i18n.t('editor.canvas.clearCanvas')}
-        </button>
       </div>
     </>
   )
