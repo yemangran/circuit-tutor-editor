@@ -20,7 +20,6 @@ export default function App() {
   const components = useCircuitStore((state) => state.doc.components)
   const selectedComponentId = useCircuitStore((state) => state.selectedComponentId)
   const hasGround = components.some((component) => component.kind === 'ground')
-  const exportState = hasGround && components.length > 0 ? 'ready' : 'draft'
   const [exportResult, setExportResult] = useState<ExportCircuitResult | null>(null)
   const [exportStatus, setExportStatus] = useState<'idle' | 'success' | 'error'>('idle')
 
@@ -87,14 +86,6 @@ export default function App() {
               <p className="support-text">{t('app.workspace.description')}</p>
             </div>
             <div className="workspace-meta workspace-tools">
-              <div
-                className="status-chip workspace-tool"
-                data-tone={exportState === 'ready' ? 'success' : 'accent'}
-              >
-                {exportState === 'ready'
-                  ? t('app.side.ready')
-                  : t('app.side.needsGround')}
-              </div>
               <div className="status-chip workspace-tool" data-tone="primary">
                 {selectedComponentId
                   ? t('app.side.selected', { id: selectedComponentId })

@@ -17,9 +17,8 @@ const zhCN = {
     },
     side: {
       statusTitle: '当前状态',
-      statusDescription: '这个工作区围绕“快速搭建、清晰标注、稳定导出”设计，适合课堂演示和题目录入。',
+      statusDescription: '这个工作区围绕"快速搭建、清晰标注、稳定导出"设计，适合课堂演示和题目录入。',
       ready: '已满足导出前置条件',
-      needsGround: '补上接地后更适合导出',
       selected: '当前选择：{{id}}',
       noSelection: '尚未选择元件',
       languageKicker: '语言',

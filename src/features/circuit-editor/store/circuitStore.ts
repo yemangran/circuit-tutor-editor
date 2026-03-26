@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import { componentTemplates, createComponentFromTemplate } from '../componentTemplates'
 import {
   BranchCurrentAnnotation,
@@ -68,7 +69,7 @@ function getNextComponentLabel(
   return `${componentTemplates[kind].labelPrefix}${getNextComponentIndex(components, kind)}`
 }
 
-export const useCircuitStore = create<{
+type CircuitStoreState = {
   doc: CircuitDocument
   selectedComponentId: string | null
   selectedWireId: string | null
@@ -81,6 +82,7 @@ export const useCircuitStore = create<{
   addWire: (from: WireEndpoint, to: WireEndpoint) => void
   clearCanvas: () => void
   deleteComponent: (componentId: string) => void
+  deleteWire: (wireId: string) => void
   duplicateComponent: (
     componentId: string,
     position?: { x: number; y: number },
@@ -113,7 +115,11 @@ export const useCircuitStore = create<{
     patch: Partial<Omit<ControlRelation, 'id' | 'targetComponentId'>>,
   ) => void
   removeControlRelation: (targetComponentId: string) => void
-}>((set) => ({
+}
+
+export const useCircuitStore = create<CircuitStoreState>()(
+  persist(
+    (set) => ({
   doc: createInitialDoc(),
   selectedComponentId: null,
   selectedWireId: null,
@@ -214,6 +220,19 @@ export const useCircuitStore = create<{
             : state.selectedWireId,
       }
     }),
+  deleteWire: (wireId) =>
+    set((state) => ({
+      doc: {
+        ...state.doc,
+        wires: state.doc.wires.filter((wire) => wire.id !== wireId),
+        annotations: state.doc.annotations.filter(
+          (annotation) =>
+            annotation.type !== 'branch_current' ||
+            !annotation.targetWireIds.includes(wireId),
+        ),
+      },
+      selectedWireId: state.selectedWireId === wireId ? null : state.selectedWireId,
+    })),
   duplicateComponent: (componentId, position) =>
     set((state) => {
       const sourceComponent = state.doc.components.find(
@@ -548,4 +567,13 @@ export const useCircuitStore = create<{
       selectedComponentId: null,
       selectedWireId: null,
     }),
-}))
+    }),
+    {
+      name: 'circuit-tutor-editor-storage',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        doc: state.doc,
+      }),
+    },
+  ),
+)

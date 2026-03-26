@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import type { DragEvent, MouseEvent as ReactMouseEvent } from 'react'
 import ReactFlow, {
   Background,
@@ -16,6 +16,7 @@ import ReactFlow, {
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { componentTemplates } from '../../componentTemplates'
+import { resolveNodes } from '../../resolveNodes'
 import {
   CapacitorNode,
   ConductanceNode,
@@ -41,6 +42,7 @@ import type { ComponentKind } from '../../types/circuit'
 import type { CircuitFlowNodeData } from '../nodes'
 import i18n from '../../../../i18n'
 import { BranchWireEdge } from './BranchWireEdge'
+import { makePinKey } from '../../unionFind'
 
 const nodeTypes = {
   resistor: ResistorNode,
@@ -277,9 +279,11 @@ export default function CircuitCanvas() {
   const components = useCircuitStore((state) => state.doc.components)
   const wires = useCircuitStore((state) => state.doc.wires)
   const annotations = useCircuitStore((state) => state.doc.annotations)
+  const namedNodes = useCircuitStore((state) => state.doc.namedNodes)
   const addComponent = useCircuitStore((state) => state.addComponent)
   const addWire = useCircuitStore((state) => state.addWire)
   const deleteComponent = useCircuitStore((state) => state.deleteComponent)
+  const deleteWire = useCircuitStore((state) => state.deleteWire)
   const duplicateComponent = useCircuitStore((state) => state.duplicateComponent)
   const selectedComponentId = useCircuitStore((state) => state.selectedComponentId)
   const selectedWireId = useCircuitStore((state) => state.selectedWireId)
@@ -311,16 +315,46 @@ export default function CircuitCanvas() {
     connectedPinsByComponent.get(wire.to.componentId)?.add(wire.to.pinId)
   }
 
-  const nodes = components.map((component) => ({
-    ...toFlowNode(component),
-    data: {
-      ...toFlowNode(component).data,
-      connectedPinIds: Array.from(
-        connectedPinsByComponent.get(component.id) ?? [],
-      ),
-    },
-    selected: component.id === selectedComponentId,
-  }))
+  const resolved = resolveNodes({
+    components,
+    wires,
+    namedNodes,
+  })
+  const namedPinIdsByComponent = new Map<string, string[]>()
+
+  for (const namedNode of namedNodes) {
+    const [componentId, pinId] = namedNode.id.split(':')
+
+    if (!componentId || !pinId) {
+      continue
+    }
+
+    const pinIds = namedPinIdsByComponent.get(componentId) ?? []
+    pinIds.push(pinId)
+    namedPinIdsByComponent.set(componentId, pinIds)
+  }
+
+  const nodes = components.map((component) => {
+    const flowNode = toFlowNode(component)
+
+    return {
+      ...flowNode,
+      data: {
+        ...flowNode.data,
+        connectedPinIds: Array.from(
+          connectedPinsByComponent.get(component.id) ?? [],
+        ),
+        pinNodeLabels: Object.fromEntries(
+          component.pins.map((pinId) => [
+            pinId,
+            resolved.pinToNode[makePinKey(component.id, pinId)] ?? '',
+          ]),
+        ),
+        namedPinIds: namedPinIdsByComponent.get(component.id) ?? [],
+      },
+      selected: component.id === selectedComponentId,
+    }
+  })
   const componentMap = new Map(
     components.map((component) => [component.id, component] as const),
   )
@@ -518,6 +552,15 @@ export default function CircuitCanvas() {
     closeContextMenu()
   }
 
+  function handleDeleteSelectedWire() {
+    if (!contextMenu || contextMenu.kind !== 'wire') {
+      return
+    }
+
+    deleteWire(contextMenu.wireId)
+    closeContextMenu()
+  }
+
   function handleDuplicateSelected() {
     if (!contextMenu || contextMenu.kind !== 'component') {
       return
@@ -563,6 +606,47 @@ export default function CircuitCanvas() {
       closeContextMenu()
     }
   }
+
+  useEffect(() => {
+    function isTypingTarget(target: EventTarget | null) {
+      if (!(target instanceof HTMLElement)) {
+        return false
+      }
+
+      return (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        target.isContentEditable
+      )
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Delete' && event.key !== 'Backspace') {
+        return
+      }
+
+      if (isTypingTarget(event.target)) {
+        return
+      }
+
+      if (selectedComponentId) {
+        event.preventDefault()
+        closeContextMenu()
+        deleteComponent(selectedComponentId)
+        return
+      }
+
+      if (selectedWireId) {
+        event.preventDefault()
+        closeContextMenu()
+        deleteWire(selectedWireId)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [deleteComponent, deleteWire, selectedComponentId, selectedWireId])
 
   return (
     <>
@@ -657,6 +741,14 @@ export default function CircuitCanvas() {
                     {i18n.t('editor.contextMenu.removeBranchCurrent')}
                   </button>
                 )}
+                <button
+                  type="button"
+                  className="canvas-context-menu-item"
+                  data-tone="danger"
+                  onClick={handleDeleteSelectedWire}
+                >
+                  {i18n.t('editor.contextMenu.delete')}
+                </button>
               </>
             )}
           </div>

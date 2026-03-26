@@ -99,7 +99,7 @@ function getNodeAccent(kind: CircuitFlowNodeKind) {
 }
 
 function getPinLabelStyle(handle: HandleConfig): CSSProperties {
-  const sideOffset = 30
+  const sideOffset = 42
 
   if (handle.position === Position.Left) {
     return {
@@ -119,14 +119,14 @@ function getPinLabelStyle(handle: HandleConfig): CSSProperties {
 
   if (handle.position === Position.Top) {
     return {
-      top: `${-sideOffset}px`,
+      top: `${-sideOffset + 4}px`,
       left: handle.style?.left ?? '50%',
       transform: 'translate(-50%, -100%)',
     }
   }
 
   return {
-    bottom: `${-sideOffset}px`,
+    bottom: `${-sideOffset + 4}px`,
     left: handle.style?.left ?? '50%',
     transform: 'translate(-50%, 100%)',
   }

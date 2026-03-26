@@ -5,109 +5,112 @@ import type {
   ControlRelation,
   ParameterValue,
   SolveTarget,
-} from './types/circuit'
-import { resolveNodes, type ResolveNodesDiagnostics } from './resolveNodes'
-import type { NodeResolutionConflict } from './unionFind'
+} from "./types/circuit";
+import { resolveNodes, type ResolveNodesDiagnostics } from "./resolveNodes";
+import type { NodeResolutionConflict } from "./unionFind";
 
 type ExportedPolarity = {
-  positive: string
-  negative: string
-}
+  positive: string;
+  negative: string;
+};
 
 type ExportedDirection = {
-  from: string
-  to: string
-}
+  from: string;
+  to: string;
+};
 
 export type ExportedComponent = {
-  id: string
-  kind: string
-  label: string
-  nodes: string[]
-  parameters: Record<string, ParameterValue>
-  polarity?: ExportedPolarity
-  direction?: ExportedDirection
-  state?: string
-}
+  id: string;
+  kind: string;
+  label: string;
+  nodes: string[];
+  parameters: Record<string, ParameterValue>;
+  polarity?: ExportedPolarity;
+  direction?: ExportedDirection;
+  state?: string;
+};
 
 export type ExportedNode = {
-  label: string
-  kind: 'ground' | 'user_named' | 'auto_generated'
-  pinCount: number
-  isExplicitJunction: boolean
-}
+  label: string;
+  kind: "ground" | "user_named" | "auto_generated";
+  pinCount: number;
+  isExplicitJunction: boolean;
+};
 
 export type ExportedAnnotation = {
-  type: Exclude<Annotation['type'], 'branch_current'>
-  label: string
-  fromNode?: string
-  toNode?: string
-  positiveNode?: string
-  negativeNode?: string
-}
+  type: Exclude<Annotation["type"], "branch_current">;
+  label: string;
+  fromNode?: string;
+  toNode?: string;
+  positiveNode?: string;
+  negativeNode?: string;
+};
 
 export type ExportedBranchCurrent = {
-  id: string
-  label: string
-  fromNode: string
-  toNode: string
-  value?: ParameterValue
-  targetWireIds: string[]
-}
+  id: string;
+  label: string;
+  fromNode: string;
+  toNode: string;
+  value?: ParameterValue;
+  targetWireIds: string[];
+};
 
 export type ExportedControlRelation = {
-  target: string
-  mode: ControlRelation['mode']
-  control: Record<string, unknown>
-  gain: ParameterValue
-}
+  target: string;
+  mode: ControlRelation["mode"];
+  control: Record<string, unknown>;
+  gain: ParameterValue;
+};
 
 export type ExportCircuitPayload = {
-  rules: string[]
-  components: ExportedComponent[]
-  nodes: ExportedNode[]
-  annotations: ExportedAnnotation[]
-  branchCurrents: ExportedBranchCurrent[]
-  controlRelations: ExportedControlRelation[]
-  solveTargets: SolveTarget[]
+  rules: string[];
+  components: ExportedComponent[];
+  nodes: ExportedNode[];
+  annotations: ExportedAnnotation[];
+  branchCurrents: ExportedBranchCurrent[];
+  controlRelations: ExportedControlRelation[];
+  solveTargets: SolveTarget[];
   meta: {
-    title: string
-    description?: string
-    groundNode?: 'GND'
-  }
-}
+    title: string;
+    description?: string;
+    groundNode?: "GND";
+  };
+};
 
 export type ExportCircuitResult = {
-  payload: ExportCircuitPayload
-  diagnostics: ResolveNodesDiagnostics
-  conflicts: NodeResolutionConflict[]
-}
+  payload: ExportCircuitPayload;
+  diagnostics: ResolveNodesDiagnostics;
+  conflicts: NodeResolutionConflict[];
+};
 
 const EXPORT_RULES = [
-  'Same node label means those pins are electrically connected.',
-  'components[].nodes are ordered by the component pin order defined in the editor.',
-  'branchCurrents[].fromNode -> toNode defines the assumed current direction.',
-  'GND is the global reference node when present.',
-]
+  "Same node label means those pins are electrically connected.",
+  "components[].nodes are ordered by the component pin order defined in the editor.",
+  "branchCurrents[].fromNode -> toNode defines the assumed current direction.",
+];
 
 function mapAnnotations(
   annotations: Annotation[],
   pinToNode: Record<string, string>,
 ): ExportedAnnotation[] {
   return annotations
-    .filter((annotation) => annotation.type !== 'branch_current')
+    .filter((annotation) => annotation.type !== "branch_current")
     .map((annotation) => {
-      if (annotation.type === 'current_arrow') {
+      if (annotation.type === "current_arrow") {
         return {
           type: annotation.type,
           label: annotation.label,
           fromNode: annotation.fromPinRef
-            ? pinToNode[`${annotation.fromPinRef.componentId}:${annotation.fromPinRef.pinId}`]
+            ? pinToNode[
+                `${annotation.fromPinRef.componentId}:${annotation.fromPinRef.pinId}`
+              ]
             : undefined,
           toNode: annotation.toPinRef
-            ? pinToNode[`${annotation.toPinRef.componentId}:${annotation.toPinRef.pinId}`]
+            ? pinToNode[
+                `${annotation.toPinRef.componentId}:${annotation.toPinRef.pinId}`
+              ]
             : undefined,
-        }
+        };
       }
 
       return {
@@ -123,8 +126,8 @@ function mapAnnotations(
               `${annotation.negativePinRef.componentId}:${annotation.negativePinRef.pinId}`
             ]
           : undefined,
-      }
-    })
+      };
+    });
 }
 
 function mapBranchCurrents(
@@ -134,18 +137,22 @@ function mapBranchCurrents(
   return annotations
     .filter(
       (annotation): annotation is BranchCurrentAnnotation =>
-        annotation.type === 'branch_current',
+        annotation.type === "branch_current",
     )
     .map((annotation) => ({
       id: annotation.id,
       label: annotation.label,
       fromNode:
-        pinToNode[`${annotation.fromPinRef.componentId}:${annotation.fromPinRef.pinId}`],
+        pinToNode[
+          `${annotation.fromPinRef.componentId}:${annotation.fromPinRef.pinId}`
+        ],
       toNode:
-        pinToNode[`${annotation.toPinRef.componentId}:${annotation.toPinRef.pinId}`],
+        pinToNode[
+          `${annotation.toPinRef.componentId}:${annotation.toPinRef.pinId}`
+        ],
       ...(annotation.value ? { value: annotation.value } : {}),
       targetWireIds: annotation.targetWireIds,
-    }))
+    }));
 }
 
 function mapControlRelations(
@@ -156,7 +163,7 @@ function mapControlRelations(
     mode: controlRelation.mode,
     control: controlRelation.control,
     gain: controlRelation.gain,
-  }))
+  }));
 }
 
 export function exportCircuit(doc: CircuitDocument): ExportCircuitResult {
@@ -164,21 +171,29 @@ export function exportCircuit(doc: CircuitDocument): ExportCircuitResult {
     components: doc.components,
     wires: doc.wires,
     namedNodes: doc.namedNodes,
-  })
-  const componentById = new Map(doc.components.map((component) => [component.id, component]))
+  });
+  const componentById = new Map(
+    doc.components.map((component) => [component.id, component]),
+  );
 
   const components: ExportedComponent[] = resolved.components
-    .filter((resolvedComponent) => resolvedComponent.component.kind !== 'junction')
+    .filter(
+      (resolvedComponent) => resolvedComponent.component.kind !== "junction",
+    )
     .map((resolvedComponent) => ({
       id: resolvedComponent.component.id,
       kind: resolvedComponent.component.kind,
       label: resolvedComponent.component.label,
       nodes: resolvedComponent.nodes,
       parameters: resolvedComponent.component.parameters,
-      ...(resolvedComponent.polarity ? { polarity: resolvedComponent.polarity } : {}),
-      ...(resolvedComponent.direction ? { direction: resolvedComponent.direction } : {}),
+      ...(resolvedComponent.polarity
+        ? { polarity: resolvedComponent.polarity }
+        : {}),
+      ...(resolvedComponent.direction
+        ? { direction: resolvedComponent.direction }
+        : {}),
       ...(resolvedComponent.state ? { state: resolvedComponent.state } : {}),
-    }))
+    }));
 
   const payload: ExportCircuitPayload = {
     rules: EXPORT_RULES,
@@ -188,8 +203,8 @@ export function exportCircuit(doc: CircuitDocument): ExportCircuitResult {
       kind: node.kind,
       pinCount: node.pins.length,
       isExplicitJunction: node.pins.some((pinKey) => {
-        const [componentId] = pinKey.split(':')
-        return componentById.get(componentId)?.kind === 'junction'
+        const [componentId] = pinKey.split(":");
+        return componentById.get(componentId)?.kind === "junction";
       }),
     })),
     annotations: mapAnnotations(doc.annotations, resolved.pinToNode),
@@ -199,17 +214,19 @@ export function exportCircuit(doc: CircuitDocument): ExportCircuitResult {
     meta: {
       title: doc.meta.title,
       ...(doc.meta.description ? { description: doc.meta.description } : {}),
-      ...(resolved.diagnostics.hasGround ? { groundNode: 'GND' } : {}),
+      ...(resolved.diagnostics.hasGround ? { groundNode: "GND" } : {}),
     },
-  }
+  };
 
   return {
     payload,
     diagnostics: resolved.diagnostics,
     conflicts: resolved.conflicts,
-  }
+  };
 }
 
-export function formatExportPayloadForLLM(payload: ExportCircuitPayload): string {
-  return JSON.stringify(payload, null, 2)
+export function formatExportPayloadForLLM(
+  payload: ExportCircuitPayload,
+): string {
+  return JSON.stringify(payload, null, 2);
 }

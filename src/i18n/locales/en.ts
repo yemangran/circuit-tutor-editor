@@ -20,8 +20,6 @@ const en = {
       statusTitle: 'Session Status',
       statusDescription:
         'This workspace is tuned for fast diagram assembly, annotation, and clean export diagnostics.',
-      ready: 'Export protocol ready',
-      needsGround: 'Add ground to complete the draft',
       selected: 'Selected: {{id}}',
       noSelection: 'No component selected',
       languageKicker: 'Language',
