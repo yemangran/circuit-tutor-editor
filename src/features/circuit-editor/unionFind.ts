@@ -88,10 +88,11 @@ export type ResolvedCircuitNode = {
 }
 
 export type NodeResolutionConflict = {
-  type: 'named_node_conflict'
+  type: 'named_node_conflict' | 'duplicate_node_label_conflict'
   nodeLabel: string
   competingLabels: string[]
   pins: string[]
+  resolvedLabel?: string
 }
 
 export type ResolveCircuitNodesArgs = {
@@ -295,6 +296,32 @@ export function resolveCircuitNodes({
       group.label = `N${autoNodeIndex}`
       autoNodeIndex += 1
     }
+  }
+
+  const usedLabels = new Map<string, number>()
+  for (const group of resolvedGroups) {
+    const currentCount = usedLabels.get(group.label) ?? 0
+
+    if (currentCount === 0) {
+      usedLabels.set(group.label, 1)
+      continue
+    }
+
+    const nextCount = currentCount + 1
+    const originalLabel = group.label
+    const resolvedLabel = `${originalLabel}#${nextCount}`
+
+    conflicts.push({
+      type: 'duplicate_node_label_conflict',
+      nodeLabel: originalLabel,
+      competingLabels: [originalLabel],
+      pins: group.pins,
+      resolvedLabel,
+    })
+
+    group.label = resolvedLabel
+    usedLabels.set(originalLabel, nextCount)
+    usedLabels.set(resolvedLabel, 1)
   }
 
   const pinToNode: Record<string, string> = {}

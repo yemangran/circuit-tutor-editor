@@ -10,6 +10,7 @@ Provide a structured representation of circuits that LLMs can reliably understan
 ```json
 {
   "components": [],
+  "junctions": [],
   "nodes": [],
   "annotations": [],
   "controlRelations": [],
@@ -56,6 +57,37 @@ Provide a structured representation of circuits that LLMs can reliably understan
 ```json
 "state": "open"
 ```
+
+---
+
+## Junctions
+
+```json
+{
+  "id": "J1",
+  "kind": "junction",
+  "label": "J1",
+  "nodes": ["Va", "Va", "Va"],
+  "pinCount": 3,
+  "pins": [
+    {
+      "pinId": "n",
+      "node": "Va",
+      "connectedPins": [
+        {
+          "componentId": "R1",
+          "componentKind": "resistor",
+          "componentLabel": "R1",
+          "pinId": "b"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Use `junctions[]` for explicit junction objects placed by the user in the editor.
+The electrically-meaningful node identity still comes from `nodes[]` and each component's `nodes`.
 
 ---
 

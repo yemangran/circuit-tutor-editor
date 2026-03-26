@@ -29,6 +29,19 @@ const DEFAULT_COMPONENT_POSITION = {
   y: 80,
 }
 
+function getNextPrefixedId(existingIds: string[], prefix: string) {
+  const maxIndex = existingIds.reduce((currentMax, id) => {
+    if (!id.startsWith(prefix)) {
+      return currentMax
+    }
+
+    const value = Number(id.slice(prefix.length))
+    return Number.isFinite(value) ? Math.max(currentMax, value) : currentMax
+  }, 0)
+
+  return `${prefix}${maxIndex + 1}`
+}
+
 function getDefaultComponentPosition(componentCount: number) {
   const column = componentCount % 4
   const row = Math.floor(componentCount / 4)
@@ -417,7 +430,12 @@ export const useCircuitStore = create<CircuitStoreState>()(
       )
 
       const nextAnnotation: BranchCurrentAnnotation = {
-        id: existing?.id ?? `BC${state.doc.annotations.length + 1}`,
+        id:
+          existing?.id ??
+          getNextPrefixedId(
+            state.doc.annotations.map((annotation) => annotation.id),
+            'BC',
+          ),
         type: 'branch_current',
         label: existing?.label ?? wireId.replace(/^W/, 'I'),
         fromPinRef: existing?.fromPinRef ?? wire.from,
@@ -500,7 +518,12 @@ export const useCircuitStore = create<CircuitStoreState>()(
           : { branch: '' }
 
       const nextRelation: ControlRelation = {
-        id: existing?.id ?? `CR${state.doc.controlRelations.length + 1}`,
+        id:
+          existing?.id ??
+          getNextPrefixedId(
+            state.doc.controlRelations.map((relation) => relation.id),
+            'CR',
+          ),
         targetComponentId,
         mode: existing?.mode ?? defaultMode,
         controlType: existing?.controlType ?? defaultControlType,
@@ -548,7 +571,10 @@ export const useCircuitStore = create<CircuitStoreState>()(
       }
 
       const wire: CircuitWire = {
-        id: `W${state.doc.wires.length + 1}`,
+        id: getNextPrefixedId(
+          state.doc.wires.map((existingWire) => existingWire.id),
+          'W',
+        ),
         from,
         to,
       }
