@@ -42,17 +42,13 @@ export type ExportedJunction = {
   id: string;
   kind: "junction";
   label: string;
-  nodes: string[];
-  pinCount: number;
-  pins: Array<{
+  node: string;
+  junctionType: "wire_splice";
+  connectedComponents: Array<{
+    componentId: string;
+    componentKind: string;
+    componentLabel: string;
     pinId: string;
-    node: string;
-    connectedPins: Array<{
-      componentId: string;
-      componentKind: string;
-      componentLabel: string;
-      pinId: string;
-    }>;
   }>;
 };
 
@@ -81,7 +77,10 @@ export type ExportedControlRelation = {
   gain: ParameterValue;
 };
 
+export const EXPORT_SCHEMA_VERSION = "2";
+
 export type ExportCircuitPayload = {
+  schemaVersion: typeof EXPORT_SCHEMA_VERSION;
   rules: string[];
   components: ExportedComponent[];
   junctions: ExportedJunction[];
@@ -104,11 +103,18 @@ export type ExportCircuitResult = {
 };
 
 const EXPORT_RULES = [
-  "Same node label means those pins are electrically connected.",
-  "components[].nodes are ordered by the component pin order defined in the editor.",
-  "junctions[] lists explicit junction objects drawn in the editor.",
-  "Exported node labels are normalized to globally unique analysis-friendly names.",
-  "branchCurrents[].fromNode -> toNode defines the assumed current direction.",
+  `This payload follows export schema version ${EXPORT_SCHEMA_VERSION}; interpret fields according to this version only.`,
+  "Treat node labels as the source of truth for electrical connectivity: the same node label means the connected pins are electrically identical.",
+  "Reconstruct topology primarily from components[].nodes plus nodes[]; do not infer connectivity from component positions, drawing geometry, or visual layout.",
+  "components[].nodes is ordered by the component pin order defined in the editor, so preserve array order when mapping a component's terminals.",
+  "nodes[] provides normalized analysis-friendly node identities; label values are globally unique within the payload and may differ from user-entered names after normalization.",
+  "meta.groundNode='GND' identifies the reference node when present; any component terminal mapped to GND is electrically grounded.",
+  "junctions[] lists explicit junction objects drawn by the user; each junction is a node-level wire splice summary, and junction.node is the electrical node represented by that junction.",
+  "junctions[].connectedComponents lists external component-pin connections touching the same electrical node; entries are pin-level, so the same component may appear multiple times if multiple pins connect there.",
+  "annotations[] add semantic hints only and never create new connectivity; use fromNode/toNode or positiveNode/negativeNode exactly as exported.",
+  "branchCurrents[].fromNode -> toNode defines the assumed positive current direction for that branch-current annotation; this is a sign convention, not an additional wire.",
+  "controlRelations[] describes dependent-source control semantics and should be interpreted together with the target component referenced by controlRelations[].target.",
+  "solveTargets[] describes the quantities the user wants solved; it does not modify circuit connectivity or component behavior.",
 ];
 
 function normalizePolarityLikeLabel(label: string) {
@@ -326,40 +332,42 @@ export function exportCircuit(doc: CircuitDocument): ExportCircuitResult {
     .filter(
       (resolvedComponent) => resolvedComponent.component.kind === "junction",
     )
-    .map((resolvedComponent) => ({
-      id: resolvedComponent.component.id,
-      kind: "junction",
-      label: resolvedComponent.component.label,
-      nodes: resolvedComponent.nodes.map((nodeLabel) =>
-        mapNodeLabel(nodeLabel, exportNodeLabelMap) ?? nodeLabel,
-      ),
-      pinCount: resolvedComponent.component.pins.length,
-      pins: resolvedComponent.component.pins.map((pinId) => {
-        const pinKey = `${resolvedComponent.component.id}:${pinId}`;
-        const nodeLabel = resolved.pinToNode[pinKey];
-        const connectedPins = (nodeByLabel.get(nodeLabel)?.pins ?? [])
-          .filter((candidatePinKey) => candidatePinKey !== pinKey)
-          .map((candidatePinKey) => {
-            const [componentId, externalPinId] = candidatePinKey.split(":");
-            const component = componentById.get(componentId);
+    .map((resolvedComponent) => {
+      const firstPinKey = `${resolvedComponent.component.id}:${resolvedComponent.component.pins[0]}`;
+      const nodeLabel = mapNodeLabel(
+        resolved.pinToNode[firstPinKey],
+        exportNodeLabelMap,
+      ) ?? resolved.pinToNode[firstPinKey];
+      const nodePins = nodeByLabel.get(resolved.pinToNode[firstPinKey])?.pins ?? [];
+      const connectedComponents = nodePins
+        .filter((candidatePinKey) => {
+          const [componentId] = candidatePinKey.split(":");
+          return componentId !== resolvedComponent.component.id;
+        })
+        .map((candidatePinKey) => {
+          const [componentId, externalPinId] = candidatePinKey.split(":");
+          const component = componentById.get(componentId);
 
-            return {
-              componentId,
-              componentKind: component?.kind ?? "unknown",
-              componentLabel: component?.label ?? componentId,
-              pinId: externalPinId ?? "",
-            };
-          });
+          return {
+            componentId,
+            componentKind: component?.kind ?? "unknown",
+            componentLabel: component?.label ?? componentId,
+            pinId: externalPinId ?? "",
+          };
+        });
 
-        return {
-          pinId,
-          node: mapNodeLabel(nodeLabel, exportNodeLabelMap) ?? nodeLabel,
-          connectedPins,
-        };
-      }),
-    }));
+      return {
+        id: resolvedComponent.component.id,
+        kind: "junction" as const,
+        label: resolvedComponent.component.label,
+        node: nodeLabel,
+        junctionType: "wire_splice" as const,
+        connectedComponents,
+      };
+    });
 
   const payload: ExportCircuitPayload = {
+    schemaVersion: EXPORT_SCHEMA_VERSION,
     rules: EXPORT_RULES,
     components,
     junctions,

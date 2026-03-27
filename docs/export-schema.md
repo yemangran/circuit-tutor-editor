@@ -9,6 +9,8 @@ Provide a structured representation of circuits that LLMs can reliably understan
 
 ```json
 {
+  "schemaVersion": "2",
+  "rules": [],
   "components": [],
   "junctions": [],
   "nodes": [],
@@ -18,6 +20,18 @@ Provide a structured representation of circuits that LLMs can reliably understan
   "meta": {}
 }
 ```
+
+---
+
+## AI Parsing Guidance
+
+- Read `schemaVersion` first and interpret the payload using that contract only.
+- Reconstruct electrical connectivity from `components[].nodes` and `nodes[]`; do not infer connectivity from canvas geometry.
+- Treat equal node labels as the same electrical node.
+- Preserve the order of `components[].nodes`, because it matches the component pin order defined by the editor.
+- Use `meta.groundNode = "GND"` as the reference node when present.
+- Treat `junctions[]` as explicit user-drawn splice summaries for already-resolved nodes, not as extra components that create new connectivity.
+- Treat `annotations[]`, `branchCurrents[]`, and `solveTargets[]` as semantic overlays on top of the resolved circuit, not as topology definitions.
 
 ---
 
@@ -67,26 +81,21 @@ Provide a structured representation of circuits that LLMs can reliably understan
   "id": "J1",
   "kind": "junction",
   "label": "J1",
-  "nodes": ["Va", "Va", "Va"],
-  "pinCount": 3,
-  "pins": [
+  "node": "Va",
+  "junctionType": "wire_splice",
+  "connectedComponents": [
     {
-      "pinId": "n",
-      "node": "Va",
-      "connectedPins": [
-        {
-          "componentId": "R1",
-          "componentKind": "resistor",
-          "componentLabel": "R1",
-          "pinId": "b"
-        }
-      ]
+      "componentId": "R1",
+      "componentKind": "resistor",
+      "componentLabel": "R1",
+      "pinId": "b"
     }
   ]
 }
 ```
 
 Use `junctions[]` for explicit junction objects placed by the user in the editor.
+In schema v2, each junction is exported as a node-level wire splice summary instead of a per-pin expansion.
 The electrically-meaningful node identity still comes from `nodes[]` and each component's `nodes`.
 
 ---
@@ -194,6 +203,11 @@ Kinds:
 ---
 
 ## Notes
+
+Schema versioning:
+- `schemaVersion: "2"` marks the current junction export contract
+- v2 junctions use `node` + `connectedComponents[]`
+- v1-style `nodes` / `pinCount` / `pins[].connectedPins` is no longer emitted
 
 This schema is optimized for:
 - KCL / KVL reasoning
