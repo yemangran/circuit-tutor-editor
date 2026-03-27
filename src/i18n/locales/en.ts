@@ -134,9 +134,12 @@ const en = {
       switchState: 'Switch State',
       nodeLabels: 'Node Labels',
       addPin: 'Add pin',
+      removePin: 'Remove pin',
       junctionPinsHint:
         'Junctions start with three pins. Add extra pins here when more branches meet at the same node.',
       currentNode: 'Current node: {{label}}',
+      pinConnected: 'This pin is connected and cannot be removed.',
+      pinUnconnected: 'This pin is unconnected and can be removed.',
       unresolved: 'Unresolved',
       nodeLabelPlaceholder: 'Set node label',
       booleanTrue: 'Yes',

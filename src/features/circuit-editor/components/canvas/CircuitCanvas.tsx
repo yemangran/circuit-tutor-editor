@@ -16,6 +16,7 @@ import ReactFlow, {
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { componentTemplates } from '../../componentTemplates'
+import { getJunctionHandleLayout } from '../../junctionLayout'
 import { resolveNodes } from '../../resolveNodes'
 import {
   CapacitorNode,
@@ -66,6 +67,7 @@ const edgeTypes = {
 
 const CANVAS_GRID_SIZE: [number, number] = [20, 20]
 const PALETTE_MIME_TYPE = 'application/x-circuit-component'
+const JUNCTION_HALF_SIZE = 14
 
 function formatParameterText(component: CircuitComponent): string | undefined {
   const parameterEntries = Object.entries(component.parameters)
@@ -105,10 +107,17 @@ function formatParameterText(component: CircuitComponent): string | undefined {
 }
 
 function toFlowNode(component: CircuitComponent): Node<CircuitFlowNodeData> {
+  const isJunction = component.kind === 'junction'
+
   return {
     id: component.id,
     type: component.kind,
-    position: component.position,
+    position: isJunction
+      ? {
+          x: component.position.x + JUNCTION_HALF_SIZE,
+          y: component.position.y + JUNCTION_HALF_SIZE,
+        }
+      : component.position,
     data: {
       kind: component.kind,
       label: component.label,
@@ -188,12 +197,7 @@ function getBaseHandlePosition(
   }
 
   if (component.kind === 'junction') {
-    if (pinId === 'n') return Position.Top
-    if (pinId === 's') return Position.Bottom
-    if (pinId === 'e') return Position.Right
-    if (pinId === 'w') return Position.Left
-    const extraIndex = Number(pinId.slice(1)) - 1
-    return extraIndex % 2 === 0 ? Position.Left : Position.Right
+    return getJunctionHandleLayout(pinId, component.rotation).position
   }
 
   const pinIndex = component.pins.indexOf(pinId)
@@ -206,6 +210,10 @@ function getHandlePositionHint(
 ): Position | undefined {
   if (!component) {
     return undefined
+  }
+
+  if (component.kind === 'junction') {
+    return getBaseHandlePosition(component, pinId)
   }
 
   return rotateHandlePosition(
@@ -418,18 +426,11 @@ export default function CircuitCanvas() {
 
     let snappedPosition
     if (component?.kind === 'junction') {
-      // Junction 节点尺寸是 28x28，让中心点吸附到网格交点
-      const JUNCTION_HALF_SIZE = 14
+      const snappedCenterX =
+        Math.round(node.position.x / CANVAS_GRID_SIZE[0]) * CANVAS_GRID_SIZE[0]
+      const snappedCenterY =
+        Math.round(node.position.y / CANVAS_GRID_SIZE[1]) * CANVAS_GRID_SIZE[1]
 
-      // 计算中心点
-      const centerX = node.position.x + JUNCTION_HALF_SIZE
-      const centerY = node.position.y + JUNCTION_HALF_SIZE
-
-      // 将中心点吸附到网格交点
-      const snappedCenterX = Math.round(centerX / CANVAS_GRID_SIZE[0]) * CANVAS_GRID_SIZE[0]
-      const snappedCenterY = Math.round(centerY / CANVAS_GRID_SIZE[1]) * CANVAS_GRID_SIZE[1]
-
-      // 计算新的 position（左上角坐标）
       snappedPosition = {
         x: snappedCenterX - JUNCTION_HALF_SIZE,
         y: snappedCenterY - JUNCTION_HALF_SIZE,
@@ -443,7 +444,17 @@ export default function CircuitCanvas() {
   }
 
   const handleNodeDrag: NodeDragHandler = (_, node) => {
-    updateComponentPosition(node.id, node.position)
+    const component = components.find((c) => c.id === node.id)
+
+    updateComponentPosition(
+      node.id,
+      component?.kind === 'junction'
+        ? {
+            x: node.position.x - JUNCTION_HALF_SIZE,
+            y: node.position.y - JUNCTION_HALF_SIZE,
+          }
+        : node.position,
+    )
   }
 
   const handleNodeClick: NodeMouseHandler = (_, node) => {

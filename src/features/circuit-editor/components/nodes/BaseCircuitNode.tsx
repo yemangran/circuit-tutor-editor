@@ -52,6 +52,94 @@ const handleBaseStyle: CSSProperties = {
   background: '#ffffff',
 }
 
+function rotateHandlePosition(
+  position: Position,
+  rotation: CircuitFlowNodeData['rotation'],
+) {
+  switch (rotation) {
+    case 90:
+      if (position === Position.Left) return Position.Top
+      if (position === Position.Right) return Position.Bottom
+      if (position === Position.Top) return Position.Right
+      return Position.Left
+    case 180:
+      if (position === Position.Left) return Position.Right
+      if (position === Position.Right) return Position.Left
+      if (position === Position.Top) return Position.Bottom
+      return Position.Top
+    case 270:
+      if (position === Position.Left) return Position.Bottom
+      if (position === Position.Right) return Position.Top
+      if (position === Position.Top) return Position.Left
+      return Position.Right
+    default:
+      return position
+  }
+}
+
+function rotateHandleStyle(
+  style: CSSProperties | undefined,
+  rotation: CircuitFlowNodeData['rotation'],
+): CSSProperties | undefined {
+  if (!style || rotation === 0) {
+    return style
+  }
+
+  if (rotation === 90 || rotation === 270) {
+    const nextStyle: CSSProperties = {}
+
+    if (style.top != null) {
+      nextStyle.left = style.top
+    }
+
+    if (style.bottom != null) {
+      nextStyle.right = style.bottom
+    }
+
+    if (rotation === 90) {
+      if (style.left != null) {
+        nextStyle.top = style.left
+      }
+
+      if (style.right != null) {
+        nextStyle.bottom = style.right
+      }
+    }
+
+    if (rotation === 270) {
+      if (style.left != null) {
+        nextStyle.bottom = style.left
+      }
+
+      if (style.right != null) {
+        nextStyle.top = style.right
+      }
+    }
+
+    return nextStyle
+  }
+
+  const nextStyle: CSSProperties = {}
+
+  if (style.top != null) {
+    nextStyle.bottom = style.top
+  }
+
+  if (style.bottom != null) {
+    nextStyle.top = style.bottom
+  }
+
+  if (style.left != null) {
+    nextStyle.right = style.left
+  }
+
+  if (style.right != null) {
+    nextStyle.left = style.right
+  }
+
+  return nextStyle
+}
+
 function getNodeAccent(kind: CircuitFlowNodeKind) {
   switch (kind) {
     case 'resistor':
@@ -141,6 +229,11 @@ export function BaseCircuitNode({
 }: BaseCircuitNodeProps) {
   const accent = getNodeAccent(data.kind)
   const updateNodeInternals = useUpdateNodeInternals()
+  const rotatedHandles = handles.map((handle) => ({
+    ...handle,
+    position: rotateHandlePosition(handle.position, data.rotation),
+    style: rotateHandleStyle(handle.style, data.rotation),
+  }))
 
   useEffect(() => {
     updateNodeInternals(id)
@@ -154,13 +247,12 @@ export function BaseCircuitNode({
       style={{
         ['--node-accent' as string]: accent.accent,
         ['--node-accent-soft' as string]: accent.soft,
-        transform: `rotate(${data.rotation}deg)`,
       }}
     >
       <div className="circuit-node-badge">
         {i18n.t(`editor.nodeBadges.${accent.badgeKey}`)}
       </div>
-      {handles.map((handle) => (
+      {rotatedHandles.map((handle) => (
         <div key={`${data.kind}-${handle.id}`}>
           <Handle
             id={handle.id}

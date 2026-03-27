@@ -116,6 +116,7 @@ type CircuitStoreState = {
   ) => void
   updateComponentState: (componentId: string, state: string) => void
   addComponentPin: (componentId: string) => void
+  removeJunctionPin: (componentId: string, pinId: string) => void
   upsertBranchCurrentAnnotation: (
     wireId: string,
     patch?: Partial<Omit<BranchCurrentAnnotation, 'id' | 'type' | 'targetWireIds'>>,
@@ -413,6 +414,46 @@ export const useCircuitStore = create<CircuitStoreState>()(
                 }
               : item,
           ),
+        },
+      }
+    }),
+  removeJunctionPin: (componentId, pinId) =>
+    set((state) => {
+      const component = state.doc.components.find((item) => item.id === componentId)
+
+      if (
+        !component ||
+        component.kind !== 'junction' ||
+        component.pins.length <= 3 ||
+        !component.pins.includes(pinId)
+      ) {
+        return state
+      }
+
+      const isConnected = state.doc.wires.some(
+        (wire) =>
+          (wire.from.componentId === componentId && wire.from.pinId === pinId) ||
+          (wire.to.componentId === componentId && wire.to.pinId === pinId),
+      )
+
+      if (isConnected) {
+        return state
+      }
+
+      const pinKey = `${componentId}:${pinId}`
+
+      return {
+        doc: {
+          ...state.doc,
+          components: state.doc.components.map((item) =>
+            item.id === componentId
+              ? {
+                  ...item,
+                  pins: item.pins.filter((existingPinId) => existingPinId !== pinId),
+                }
+              : item,
+          ),
+          namedNodes: state.doc.namedNodes.filter((node) => node.id !== pinKey),
         },
       }
     }),

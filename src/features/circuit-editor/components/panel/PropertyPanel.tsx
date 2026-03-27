@@ -46,6 +46,7 @@ export function PropertyPanel() {
     (state) => state.updateComponentState,
   );
   const addComponentPin = useCircuitStore((state) => state.addComponentPin);
+  const removeJunctionPin = useCircuitStore((state) => state.removeJunctionPin);
   const upsertBranchCurrentAnnotation = useCircuitStore(
     (state) => state.upsertBranchCurrentAnnotation,
   );
@@ -277,6 +278,12 @@ export function PropertyPanel() {
 
   const namedNodeMap = Object.fromEntries(
     doc.namedNodes.map((namedNode) => [namedNode.id, namedNode.label]),
+  );
+  const connectedPinKeys = new Set(
+    doc.wires.flatMap((wire) => [
+      makePinKey(wire.from.componentId, wire.from.pinId),
+      makePinKey(wire.to.componentId, wire.to.pinId),
+    ]),
   );
   const controlRelation =
     selectedComponent &&
@@ -513,13 +520,30 @@ export function PropertyPanel() {
               const pinKey = makePinKey(selectedComponent.id, pinId);
               const nodeLabel = resolved.pinToNode[pinKey] ?? "";
               const namedLabel = namedNodeMap[pinKey] ?? "";
+              const isConnected = connectedPinKeys.has(pinKey);
+              const canRemovePin =
+                selectedComponent.kind === "junction" &&
+                !isConnected &&
+                selectedComponent.pins.length > 3;
 
               return (
                 <div key={pinKey} className="pill-card">
                   <div className="meta-row">
                     <div className="field-label">{pinId}</div>
-                    <div className="palette-prefix">
-                      {nodeLabel || t("panel.fields.unresolved")}
+                    <div className="panel-actions-row" style={{ gap: 8 }}>
+                      <div className="palette-prefix">
+                        {nodeLabel || t("panel.fields.unresolved")}
+                      </div>
+                      {canRemovePin ? (
+                        <button
+                          type="button"
+                          className="panel-action"
+                          onClick={() =>
+                            removeJunctionPin(selectedComponent.id, pinId)}
+                        >
+                          {t("panel.fields.removePin")}
+                        </button>
+                      ) : null}
                     </div>
                   </div>
                   <p className="field-hint" style={{ marginTop: 10 }}>
@@ -527,6 +551,13 @@ export function PropertyPanel() {
                       label: nodeLabel || t("panel.fields.unresolved"),
                     })}
                   </p>
+                  {selectedComponent.kind === "junction" ? (
+                    <p className="field-hint" style={{ marginTop: 8 }}>
+                      {isConnected
+                        ? t("panel.fields.pinConnected")
+                        : t("panel.fields.pinUnconnected")}
+                    </p>
+                  ) : null}
                   <label
                     className="field-hint"
                     htmlFor={`${sectionIdBase}-${pinId}-node-label`}

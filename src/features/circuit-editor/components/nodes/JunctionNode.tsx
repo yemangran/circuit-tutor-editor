@@ -6,6 +6,7 @@ import {
   type NodeProps,
 } from 'reactflow'
 import type { CircuitFlowNodeData } from './BaseCircuitNode'
+import { getJunctionHandleLayout } from '../../junctionLayout'
 
 const handleStyle: CSSProperties = {
   width: 10,
@@ -21,136 +22,13 @@ type JunctionHandle = {
   style?: CSSProperties
 }
 
-function getRotatedPosition(
-  position: Position,
-  rotation: CircuitFlowNodeData['rotation'],
-) {
-  switch (rotation) {
-    case 90:
-      if (position === Position.Left) return Position.Top
-      if (position === Position.Right) return Position.Bottom
-      if (position === Position.Top) return Position.Right
-      return Position.Left
-    case 180:
-      if (position === Position.Left) return Position.Right
-      if (position === Position.Right) return Position.Left
-      if (position === Position.Top) return Position.Bottom
-      return Position.Top
-    case 270:
-      if (position === Position.Left) return Position.Bottom
-      if (position === Position.Right) return Position.Top
-      if (position === Position.Top) return Position.Left
-      return Position.Right
-    default:
-      return position
-  }
-}
-
-function getRotatedHandleStyle(
-  style: CSSProperties | undefined,
-  rotation: CircuitFlowNodeData['rotation'],
-): CSSProperties | undefined {
-  if (!style) {
-    return undefined
-  }
-
-  if (rotation === 90 || rotation === 270) {
-    const nextStyle: CSSProperties = {}
-
-    if (style.top != null) {
-      nextStyle.left = style.top
-    }
-
-    if (rotation === 90) {
-      if (style.left != null) {
-        nextStyle.top = style.left
-      }
-
-      if (style.right != null) {
-        nextStyle.bottom = style.right
-      }
-    }
-
-    if (rotation === 270) {
-      if (style.left != null) {
-        nextStyle.bottom = style.left
-      }
-
-      if (style.right != null) {
-        nextStyle.top = style.right
-      }
-    }
-
-    return nextStyle
-  }
-
-  if (rotation === 180) {
-    const nextStyle: CSSProperties = {}
-
-    if (style.top != null) {
-      nextStyle.bottom = style.top
-    }
-
-    if (style.bottom != null) {
-      nextStyle.top = style.bottom
-    }
-
-    if (style.left != null) {
-      nextStyle.right = style.left
-    }
-
-    if (style.right != null) {
-      nextStyle.left = style.right
-    }
-
-    return nextStyle
-  }
-
-  return style
-}
-
-function getExtraHandleStyle(index: number): JunctionHandle {
-  const side = index % 2 === 0 ? Position.Left : Position.Right
-  const row = Math.floor(index / 2)
-  const top = `${Math.min(26 + row * 22, 74)}%`
-
-  return {
-    id: `x${index + 1}`,
-    position: side,
-    style: { top },
-  }
-}
-
-function getJunctionHandles(pinIds: string[]): JunctionHandle[] {
-  return pinIds.map((pinId) => {
-    if (pinId === 'n') {
-      return { id: pinId, position: Position.Top }
-    }
-
-    if (pinId === 's') {
-      return { id: pinId, position: Position.Bottom }
-    }
-
-    if (pinId === 'e') {
-      return { id: pinId, position: Position.Right }
-    }
-
-    if (pinId === 'w') {
-      return { id: pinId, position: Position.Left }
-    }
-
-    const extraIndex = Number(pinId.slice(1)) - 1
-    return getExtraHandleStyle(Number.isFinite(extraIndex) ? extraIndex : 0)
-  })
-}
-
 function getPinLabelStyle(handle: JunctionHandle): CSSProperties {
   const sideOffset = 30
 
   if (handle.position === Position.Left) {
     return {
       top: handle.style?.top ?? '50%',
-      left: `${-sideOffset}px`,
+      left: `calc(${handle.style?.left ?? '50%'} - ${sideOffset}px)`,
       transform: 'translate(-100%, -50%)',
     }
   }
@@ -158,23 +36,23 @@ function getPinLabelStyle(handle: JunctionHandle): CSSProperties {
   if (handle.position === Position.Right) {
     return {
       top: handle.style?.top ?? '50%',
-      right: `${-sideOffset}px`,
-      transform: 'translate(100%, -50%)',
+      left: `calc(${handle.style?.left ?? '50%'} + ${sideOffset}px)`,
+      transform: 'translate(0, -50%)',
     }
   }
 
   if (handle.position === Position.Top) {
     return {
-      top: `${-sideOffset + 4}px`,
-      left: '50%',
+      top: `calc(${handle.style?.top ?? '50%'} - ${sideOffset - 4}px)`,
+      left: handle.style?.left ?? '50%',
       transform: 'translate(-50%, -100%)',
     }
   }
 
   return {
-    bottom: `${-sideOffset + 4}px`,
-    left: '50%',
-    transform: 'translate(-50%, 100%)',
+    top: `calc(${handle.style?.top ?? '50%'} + ${sideOffset - 4}px)`,
+    left: handle.style?.left ?? '50%',
+    transform: 'translate(-50%, 0)',
   }
 }
 
@@ -184,7 +62,10 @@ export function JunctionNode({
   selected,
 }: NodeProps<CircuitFlowNodeData>) {
   const updateNodeInternals = useUpdateNodeInternals()
-  const junctionHandles = getJunctionHandles(data.pins)
+  const junctionHandles = data.pins.map((pinId) => ({
+    id: pinId,
+    ...getJunctionHandleLayout(pinId, data.rotation),
+  }))
 
   useEffect(() => {
     updateNodeInternals(id)
@@ -197,7 +78,7 @@ export function JunctionNode({
           <Handle
             id={handle.id}
             type="source"
-            position={getRotatedPosition(handle.position, data.rotation)}
+            position={handle.position}
             className={
               data.connectedPinIds?.includes(handle.id)
                 ? 'pin-handle pin-handle-connected'
@@ -206,7 +87,8 @@ export function JunctionNode({
             isConnectable={!data.connectedPinIds?.includes(handle.id)}
             style={{
               ...handleStyle,
-              ...getRotatedHandleStyle(handle.style, data.rotation),
+              ...handle.style,
+              transform: 'translate(-50%, -50%)',
               ...(data.connectedPinIds?.includes(handle.id)
                 ? {
                     background: '#172033',
