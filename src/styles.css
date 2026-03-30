@@ -607,6 +607,11 @@ textarea:focus-visible {
         box-shadow 180ms ease;
 }
 
+.textarea-input {
+    min-height: 200px;
+    resize: vertical;
+}
+
 .text-input:focus,
 .select-input:focus {
     border-color: rgba(37, 99, 235, 0.48);
@@ -658,6 +663,57 @@ textarea:focus-visible {
     overflow: auto;
     white-space: pre-wrap;
     word-break: break-word;
+}
+
+.analysis-output {
+    min-height: 320px;
+    max-height: min(60vh, 720px);
+}
+
+.dialog-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 24;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(15, 23, 42, 0.34);
+    backdrop-filter: blur(10px);
+}
+
+.dialog-card {
+    width: min(760px, calc(100vw - 48px));
+    max-height: calc(100vh - 48px);
+    overflow: auto;
+}
+
+.dialog-card-wide {
+    width: min(1180px, calc(100vw - 48px));
+}
+
+.ai-analysis-layout {
+    display: grid;
+    grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.3fr);
+    gap: 16px;
+}
+
+.analysis-preview-image {
+    display: block;
+    width: 100%;
+    border: 2px solid rgba(141, 164, 197, 0.28);
+    border-radius: 20px;
+    background: #ffffff;
+    object-fit: contain;
+    box-shadow: var(--shadow-sm);
+}
+
+.empty-state[data-tone="danger"] {
+    border-color: rgba(249, 115, 22, 0.3);
+    background: linear-gradient(
+        180deg,
+        rgba(255, 247, 237, 0.96),
+        rgba(255, 237, 213, 0.82)
+    );
 }
 
 .canvas-empty {
@@ -984,6 +1040,10 @@ textarea:focus-visible {
         grid-template-columns: 1fr;
     }
 
+    .ai-analysis-layout {
+        grid-template-columns: 1fr;
+    }
+
     .studio-layout {
         height: auto;
     }
@@ -1020,6 +1080,16 @@ textarea:focus-visible {
 
     .palette-grid-compact {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .dialog-backdrop {
+        padding: 12px;
+    }
+
+    .dialog-card,
+    .dialog-card-wide {
+        width: calc(100vw - 24px);
+        max-height: calc(100vh - 24px);
     }
 }
 

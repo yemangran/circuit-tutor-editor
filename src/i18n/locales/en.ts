@@ -212,6 +212,59 @@ const en = {
       conflicts: "Conflicts: {{count}}",
     },
   },
+  ai: {
+    common: {
+      close: "Close",
+    },
+    status: {
+      notConfigured: "AI vision not configured",
+      success: "AI vision complete",
+      error: "AI vision failed",
+    },
+    settings: {
+      trigger: "AI Settings",
+      title: "AI Vision Settings",
+      subtitle:
+        "Configure an OpenAI-compatible endpoint, model, and prompt for circuit recognition.",
+      securityTitle: "Security note",
+      securityBody:
+        "This implementation calls your configured model endpoint directly from the browser. No endpoint is provided by default, and the API key is kept only in page memory instead of local storage.",
+      baseURL: "Compatible Base URL",
+      baseURLPlaceholder: "For example: https://api.openai.com/v1",
+      model: "Model",
+      modelPlaceholder:
+        "Enter a model ID such as gpt-4.1-mini or a compatible provider model",
+      apiKey: "API Key",
+      apiKeyPlaceholder: "Enter the API key for this session",
+      apiKeyHint:
+        "The API key is not persisted and must be entered again after refresh.",
+      prompt: "Recognition prompt",
+      promptPlaceholder: "Set the instruction sent to the model",
+      resetPrompt: "Reset prompt",
+    },
+    analysis: {
+      trigger: "Analyze Diagram",
+      running: "Analyzing...",
+      title: "AI Vision Result",
+      subtitle:
+        "Send a screenshot of the current canvas directly to a multimodal model.",
+      preview: "Screenshot preview",
+      previewAlt: "Preview of the current circuit diagram screenshot",
+      noPreview: "No screenshot preview available yet.",
+      result: "Model output",
+      empty: "No recognition result yet.",
+      loading:
+        "Capturing the circuit canvas and sending it to the model. Please wait.",
+      errorTitle: "Request failed",
+      genericError:
+        "Circuit recognition failed. Check the endpoint, model, and network connection.",
+      missingConfig:
+        "Fill in the endpoint, model, and API key in AI Settings first.",
+      copy: "Copy result",
+      copySuccess: "AI result copied",
+      copyError: "Failed to copy AI result",
+    },
+  },
 } as const;
 
 export default en;

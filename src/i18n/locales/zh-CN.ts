@@ -203,6 +203,52 @@ const zhCN = {
       conflicts: "冲突数：{{count}}",
     },
   },
+  ai: {
+    common: {
+      close: "关闭",
+    },
+    status: {
+      notConfigured: "AI 识图未配置",
+      success: "AI 识图完成",
+      error: "AI 识图失败",
+    },
+    settings: {
+      trigger: "AI 设置",
+      title: "AI 识图设置",
+      subtitle: "配置兼容 OpenAI 的端点、模型和识图提示词。",
+      securityTitle: "安全提示",
+      securityBody:
+        "当前实现会在浏览器中直接请求你配置的模型端点。默认不提供端点，API Key 只保存在当前页面运行时内存中，不会写入本地存储。",
+      baseURL: "兼容端点 Base URL",
+      baseURLPlaceholder: "例如：https://api.openai.com/v1",
+      model: "模型名称",
+      modelPlaceholder: "填写模型 ID，例如 gpt-4.1-mini 或兼容模型名",
+      apiKey: "API Key",
+      apiKeyPlaceholder: "输入用于当前会话的 API Key",
+      apiKeyHint: "API Key 不会被持久化，刷新页面后需要重新输入。",
+      prompt: "识图提示词",
+      promptPlaceholder: "设置发送给模型的识图指令",
+      resetPrompt: "重置提示词",
+    },
+    analysis: {
+      trigger: "识图分析",
+      running: "识图中...",
+      title: "AI 识图结果",
+      subtitle: "直接把当前画布截图发送给多模态模型识别。",
+      preview: "截图预览",
+      previewAlt: "当前电路图截图预览",
+      noPreview: "尚未生成截图预览。",
+      result: "模型输出",
+      empty: "还没有识图结果。",
+      loading: "正在截取电路图并请求模型识别，请稍候。",
+      errorTitle: "请求失败",
+      genericError: "模型识图失败，请检查端点、模型和网络连接。",
+      missingConfig: "请先在 AI 设置中填写端点、模型和 API Key。",
+      copy: "复制结果",
+      copySuccess: "AI 识图结果已复制",
+      copyError: "AI 识图结果复制失败",
+    },
+  },
 } as const;
 
 export default zhCN;
