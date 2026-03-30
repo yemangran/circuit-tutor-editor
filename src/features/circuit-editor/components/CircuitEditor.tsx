@@ -1,4 +1,5 @@
 import { ReactFlowProvider } from "reactflow";
+import { useEffect, useRef, useState } from "react";
 import CircuitCanvas from "./canvas/CircuitCanvas";
 import { CanvasFoot } from "./canvas/CanvasFoot";
 import { PropertyPanel } from "./panel/PropertyPanel";
@@ -9,11 +10,36 @@ import { useTranslation } from "react-i18next";
 export default function CircuitEditor() {
   const { t } = useTranslation();
   const components = useCircuitStore((state) => state.doc.components);
+  const documentTitle = useCircuitStore((state) => state.doc.meta.title);
   const selectedComponentId = useCircuitStore(
     (state) => state.selectedComponentId,
   );
   const selectedWireId = useCircuitStore((state) => state.selectedWireId);
+  const updateDocumentTitle = useCircuitStore(
+    (state) => state.updateDocumentTitle,
+  );
   const hasSelection = Boolean(selectedComponentId || selectedWireId);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(documentTitle);
+  const titleInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    setTitleDraft(documentTitle);
+  }, [documentTitle]);
+
+  useEffect(() => {
+    if (isEditingTitle) {
+      titleInputRef.current?.focus();
+      titleInputRef.current?.select();
+    }
+  }, [isEditingTitle]);
+
+  function commitTitle(nextTitle: string) {
+    const normalizedTitle = nextTitle.trim() || t("editor.canvas.defaultTitle");
+    updateDocumentTitle(normalizedTitle);
+    setTitleDraft(normalizedTitle);
+    setIsEditingTitle(false);
+  }
 
   return (
     <ReactFlowProvider>
@@ -28,8 +54,38 @@ export default function CircuitEditor() {
         <ComponentPalette />
         <div className="studio-card canvas-shell">
           <div className="canvas-head">
-            <div>
-              <h3 className="panel-title">{t("editor.canvas.title")}</h3>
+            <div className="canvas-head-copy">
+              {isEditingTitle ? (
+                <input
+                  ref={titleInputRef}
+                  id="circuit-title"
+                  className="canvas-title-editor"
+                  value={titleDraft}
+                  aria-label={t("editor.canvas.editTitle")}
+                  onChange={(event) => setTitleDraft(event.target.value)}
+                  onBlur={() => commitTitle(titleDraft)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      commitTitle(titleDraft);
+                    }
+
+                    if (event.key === "Escape") {
+                      setTitleDraft(documentTitle);
+                      setIsEditingTitle(false);
+                    }
+                  }}
+                />
+              ) : (
+                <button
+                  type="button"
+                  className="canvas-title-trigger"
+                  onClick={() => setIsEditingTitle(true)}
+                  aria-label={t("editor.canvas.editTitle")}
+                  title={t("editor.canvas.editTitle")}
+                >
+                  <h3 className="panel-title canvas-title">{documentTitle}</h3>
+                </button>
+              )}
               <p className="panel-subtitle">{t("editor.canvas.subtitle")}</p>
             </div>
             <div className="workspace-meta">
